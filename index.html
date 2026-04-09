@@ -945,6 +945,9 @@ function showToast(msg,type=''){
 loadLocal();
 render();
 initFirebase().then(updateSyncUI).catch(()=>updateSyncUI());
+
+</script>
+
 <script type="module">
   // Import the functions you need from the SDKs you need
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
@@ -968,5 +971,6 @@ initFirebase().then(updateSyncUI).catch(()=>updateSyncUI());
   const app = initializeApp(firebaseConfig);
   const analytics = getAnalytics(app);
 </script>
+
 </body>
 </html>
