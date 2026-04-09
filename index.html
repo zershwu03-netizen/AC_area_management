@@ -33,6 +33,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .sync-pill{display:flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:5px 10px;border-radius:20px;border:1px solid var(--border);background:var(--surface2);color:var(--text-dim);cursor:pointer;white-space:nowrap;}
 .sync-pill.ok{color:var(--success);border-color:rgba(22,163,74,.4);background:rgba(22,163,74,.06);}
 .sync-pill.err{color:var(--danger);border-color:rgba(220,38,38,.3);background:rgba(220,38,38,.05);}
+.sync-pill.syncing{color:#d97706;border-color:rgba(217,119,6,.4);background:rgba(217,119,6,.06);}
 .sync-dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0;}
 
 .main{padding:11px;max-width:800px;margin:0 auto;}
@@ -344,13 +345,23 @@ async function initFirebase() {
   }
 }
 
-function updateSyncUI() {
+function updateSyncUI(state) {
   const pill  = document.getElementById('syncPill');
   const label = document.getElementById('syncLabel');
-  if (fbConnected) {
-    pill.className='sync-pill ok'; label.textContent='雲端連線';
+  if (!fbConnected) {
+    pill.className='sync-pill err'; label.textContent='本地模式'; return;
+  }
+  if (state === 'syncing') {
+    pill.className='sync-pill syncing'; label.textContent='同步中…';
+  } else if (state === 'synced') {
+    pill.className='sync-pill ok'; label.textContent='✓ 已同步';
+    // 3秒後回到「雲端連線」靜態狀態
+    clearTimeout(window._syncTimer);
+    window._syncTimer = setTimeout(()=>{
+      pill.className='sync-pill ok'; label.textContent='雲端連線';
+    }, 3000);
   } else {
-    pill.className='sync-pill err'; label.textContent='本地模式';
+    pill.className='sync-pill ok'; label.textContent='雲端連線';
   }
 }
 
@@ -362,7 +373,14 @@ async function persistRecord(rec) {
   if (i>=0) records[i]=rec; else records.unshift(rec);
   saveLocal(); updateStats();
   if (fbConnected && window._fbSave) {
-    try { await window._fbSave(rec); } catch(e) { showToast('雲端同步失敗','error'); }
+    updateSyncUI('syncing');
+    try {
+      await window._fbSave(rec);
+      updateSyncUI('synced');
+    } catch(e) {
+      showToast('雲端同步失敗','error');
+      updateSyncUI();
+    }
   }
 }
 
@@ -370,7 +388,14 @@ async function removeRecord(id) {
   records = records.filter(r=>r.id!==id);
   saveLocal(); updateStats();
   if (fbConnected && window._fbDel) {
-    try { await window._fbDel(id); } catch(e) { showToast('雲端同步失敗','error'); }
+    updateSyncUI('syncing');
+    try {
+      await window._fbDel(id);
+      updateSyncUI('synced');
+    } catch(e) {
+      showToast('雲端同步失敗','error');
+      updateSyncUI();
+    }
   }
 }
 
@@ -435,7 +460,7 @@ function matOpts(sel){
 function renderCard(rec){
   const ta=recTot(rec,'area'), tt=recTot(rec,'tons'), tm=recTot(rec,'mill');
   return `<div class="record-card" id="card-${rec.id}">
-  <div class="record-card-header" onclick="toggle(${rec.id})">
+  <div class="record-card-header" onclick="toggle(${rec.id})" style="user-select:none">
     <div class="record-meta">
       <span class="card-loc-badge" id="tloc-${rec.id}">${eh(rec.caseLocation||'板橋')}</span>
       <span class="card-case-badge" id="tcn-${rec.id}">${eh(buildCaseNumLabel(rec))}</span>
@@ -453,7 +478,7 @@ function renderCard(rec){
       </div>
     </div>
   </div>
-  <div class="card-summary" id="cs-${rec.id}">
+  <div class="card-summary" id="cs-${rec.id}" onclick="event.stopPropagation()">
     <div class="card-sum-item">
       <span class="card-sum-label">面積</span>
       <span class="card-sum-val" id="cs-a-${rec.id}">${n(ta,1)}</span>
@@ -472,7 +497,7 @@ function renderCard(rec){
       <span class="card-sum-unit">T</span>
     </div>
   </div>
-  <div class="record-body" id="bd-${rec.id}">
+  <div class="record-body" id="bd-${rec.id}" onclick="event.stopPropagation()">
     <div class="info-grid">
       <div class="fg"><div class="fl">派案地點</div>
         <div class="sw">
