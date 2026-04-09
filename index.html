@@ -308,9 +308,11 @@ async function initFirebase() {
     fbApp = getApps().length ? getApp() : initializeApp(cfg);
     fbDB  = getFirestore(fbApp);
 
-    // Listen to records
+    // Listen to records — 只在其他裝置有變動時才重新渲染
     if (fbUnsub) fbUnsub();
     fbUnsub = onSnapshot(collection(fbDB,'records'), snap => {
+      // 如果是自己觸發的寫入，忽略這次 snapshot（避免重新渲染打斷輸入）
+      if (window._suppressSnapshot) return;
       const docs = [];
       snap.forEach(d => docs.push(d.data()));
       docs.sort((a,b)=>(b.id||0)-(a.id||0));
@@ -326,10 +328,17 @@ async function initFirebase() {
 
     // Expose helpers
     window._fbSave = async (rec) => {
+      window._suppressSnapshot = true;
       await setDoc(doc(fbDB,'records',String(rec.id)), JSON.parse(JSON.stringify(rec)));
+      // 短暫延遲後解除，讓其他裝置的真實更新能正常進來
+      clearTimeout(window._suppressTimer);
+      window._suppressTimer = setTimeout(() => { window._suppressSnapshot = false; }, 1500);
     };
     window._fbDel = async (id) => {
+      window._suppressSnapshot = true;
       await deleteDoc(doc(fbDB,'records',String(id)));
+      clearTimeout(window._suppressTimer);
+      window._suppressTimer = setTimeout(() => { window._suppressSnapshot = false; }, 1500);
     };
     window._fbSaveMats = async (list) => {
       await setDoc(doc(fbDB,'config','materials'), {list});
