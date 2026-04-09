@@ -149,6 +149,29 @@ table.dt tbody tr:last-child td{border-bottom:none;}
 .btn-print:active{background:#1d4ed8;}
 .btn-print svg{width:14px;height:14px;}
 
+
+/* SEARCH BAR */
+.search-bar{display:flex;gap:7px;margin-bottom:10px;align-items:center;}
+.search-input{flex:1;background:#fff;border:1.5px solid var(--border);border-radius:9px;padding:9px 12px;font-family:var(--font);font-size:14px;color:var(--text);box-shadow:var(--shadow);}
+.search-input:focus{outline:none;border-color:var(--accent);}
+.filter-btn{display:flex;align-items:center;gap:4px;padding:9px 12px;border-radius:9px;border:1.5px solid var(--border);background:#fff;font-family:var(--font);font-size:13px;font-weight:600;color:var(--text-dim);cursor:pointer;white-space:nowrap;box-shadow:var(--shadow);}
+.filter-btn.active{border-color:var(--accent);color:var(--accent);background:#eff6ff;}
+.filter-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
+.filter-tag{padding:6px 12px;border-radius:20px;border:1.5px solid var(--border);background:#fff;font-size:13px;font-weight:600;color:var(--text-dim);cursor:pointer;transition:all .15s;}
+.filter-tag.active{border-color:var(--accent);color:var(--accent);background:#eff6ff;}
+
+/* OFFLINE BANNER */
+.offline-banner{display:none;background:#fef3c7;border:1.5px solid #f59e0b;border-radius:9px;padding:10px 14px;font-size:13px;font-weight:600;color:#92400e;margin-bottom:10px;align-items:center;gap:8px;}
+.offline-banner.show{display:flex;}
+
+/* STATS MODAL */
+.stats-grid{display:flex;flex-direction:column;gap:8px;overflow-y:auto;max-height:60vh;}
+.stats-row{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;}
+.stats-row-name{font-size:14px;font-weight:700;color:var(--text);}
+.stats-row-area{font-size:13px;font-weight:700;color:var(--accent);text-align:right;white-space:nowrap;}
+.stats-row-tons{font-size:13px;font-weight:700;color:var(--accent2);text-align:right;white-space:nowrap;}
+.stats-total{display:grid;grid-template-columns:1fr auto auto;gap:10px;padding:11px 12px;background:#eff6ff;border:2px solid var(--accent);border-radius:8px;margin-top:4px;}
+.stats-col-hdr{font-size:11px;font-weight:700;color:var(--text-dim);text-align:right;letter-spacing:.5px;text-transform:uppercase;}
 /* ── PRINT STYLES ── */
 @media print{
   body *{visibility:hidden;}
@@ -177,9 +200,27 @@ table.dt tbody tr:last-child td{border-bottom:none;}
 </div>
 
 <div class="main">
-  <div class="stats-bar">
+  <div class="stats-bar" style="align-items:stretch">
     <div class="stat-chip"><div class="val" id="stR">0</div><div class="lbl">施工記錄筆數</div></div>
+    <div class="stat-chip" onclick="openStatsModal()" style="cursor:pointer;border-color:var(--accent);background:#eff6ff">
+      <div class="val" style="font-size:22px">📊</div>
+      <div class="lbl" style="color:var(--accent)">派案統計</div>
+    </div>
   </div>
+
+  <div class="offline-banner" id="offlineBanner">
+    ⚠️ 目前離線中，資料已暫存於本機，連線後自動同步
+  </div>
+
+  <div class="search-bar">
+    <input class="search-input" id="searchInp" placeholder="🔍 搜尋路段、派案名稱…" oninput="doSearch()" type="search">
+  </div>
+  <div class="filter-row" id="filterRow">
+    <span class="filter-tag active" data-filter="all" onclick="setFilter('all',this)">全部</span>
+    <span class="filter-tag" data-filter="day" onclick="setFilter('day',this)">☀️ 日間</span>
+    <span class="filter-tag" data-filter="night" onclick="setFilter('night',this)">🌙 夜間</span>
+  </div>
+
   <div class="section-label">施工記錄</div>
   <div class="add-card" onclick="addRecord()">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:17px;height:17px"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
@@ -209,6 +250,18 @@ table.dt tbody tr:last-child td{border-bottom:none;}
   </div>
 </div></div>
 
+
+<!-- Stats Modal -->
+<div class="mo" id="statsMo"><div class="md" style="max-width:440px">
+  <h3>📊 派案統計</h3>
+  <div style="display:grid;grid-template-columns:1fr auto auto;gap:10px;padding:0 2px 4px">
+    <span class="stats-col-hdr">派案</span>
+    <span class="stats-col-hdr">面積(m²)</span>
+    <span class="stats-col-hdr">噸數(T)</span>
+  </div>
+  <div class="stats-grid" id="statsGrid"></div>
+  <div class="md-actions"><button class="btn btn-ghost" onclick="closeStatsMo()">關閉</button></div>
+</div></div>
 
 <!-- Print Area -->
 <div id="print-area" style="display:none"></div>
@@ -457,7 +510,7 @@ function render(){
       <div style="font-size:30px;margin-bottom:9px;opacity:.4">📋</div>尚無施工記錄</div>`;
     updateStats(); return;
   }
-  rl.innerHTML=records.map(r=>renderCard(r)).join('');
+  renderFiltered();
   updateStats();
 }
 
@@ -539,8 +592,8 @@ function renderCard(rec){
       </div>
     </div>
     <div class="info-grid">
-      <div class="fg"><div class="fl">刨除時間</div><input class="fi" value="${ea(rec.milling)}" oninput="uf(${rec.id},'milling',this.value)" placeholder="22:00"></div>
-      <div class="fg"><div class="fl">鋪設時間</div><input class="fi" value="${ea(rec.paving)}" oninput="uf(${rec.id},'paving',this.value)" placeholder="23:00"></div>
+      <div class="fg"><div class="fl">刨除時間</div><input class="fi" type="time" value="${rec.milling||''}" onchange="uf(${rec.id},'milling',this.value)"></div>
+      <div class="fg"><div class="fl">鋪設時間</div><input class="fi" type="time" value="${rec.paving||''}" onchange="uf(${rec.id},'paving',this.value)"></div>
     </div>
     <div class="fg"><div class="fl">料別</div><div class="sw"><select class="fs" id="ms-${rec.id}" onchange="uMat(${rec.id},this)">${matOpts(rec.material)}</select></div></div>
 
@@ -786,6 +839,113 @@ function addMat(){
 function removeMat(i){const nm=materials.splice(i,1)[0];persistMats();renderMatList();showToast(`已刪除「${nm}」`);}
 
 
+
+// ══════════════════════════════════════════
+//  SEARCH & FILTER
+// ══════════════════════════════════════════
+let searchQ = '';
+let activeFilter = 'all';
+
+function doSearch() {
+  searchQ = document.getElementById('searchInp').value.trim().toLowerCase();
+  renderFiltered();
+}
+
+function setFilter(f, el) {
+  activeFilter = f;
+  document.querySelectorAll('.filter-tag').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderFiltered();
+}
+
+function getFiltered() {
+  return records.filter(rec => {
+    // shift filter
+    if (activeFilter === 'day'   && rec.shift !== '日間') return false;
+    if (activeFilter === 'night' && rec.shift !== '夜間') return false;
+    // search
+    if (!searchQ) return true;
+    const hay = [
+      buildCaseNo(rec), rec.zone, rec.date, rec.material,
+      rec.caseLocation, rec.caseNum,
+      ...( rec.rows||[] ).map(r=>r.segment)
+    ].join(' ').toLowerCase();
+    return hay.includes(searchQ);
+  });
+}
+
+function renderFiltered() {
+  const rl = document.getElementById('rl');
+  const filtered = getFiltered();
+  if (!filtered.length) {
+    rl.innerHTML = `<div style="text-align:center;padding:30px 14px;color:var(--text-dim);font-size:14px">
+      <div style="font-size:28px;margin-bottom:8px">🔍</div>找不到符合的記錄</div>`;
+    return;
+  }
+  rl.innerHTML = filtered.map(r => renderCard(r)).join('');
+}
+
+// ══════════════════════════════════════════
+//  STATS MODAL
+// ══════════════════════════════════════════
+function openStatsModal() {
+  const grid = document.getElementById('statsGrid');
+  if (!records.length) {
+    grid.innerHTML = '<div style="color:var(--text-dim);font-size:13px;padding:10px">尚無記錄</div>';
+    document.getElementById('statsMo').classList.add('open');
+    return;
+  }
+
+  // Group by caseNo
+  const map = {};
+  records.forEach(rec => {
+    const key = buildCaseNo(rec);
+    if (!map[key]) map[key] = { name: key, area: 0, tons: 0, count: 0 };
+    map[key].area  += recTot(rec, 'area');
+    map[key].tons  += recTot(rec, 'tons');
+    map[key].count += 1;
+  });
+
+  const list = Object.values(map).sort((a,b) => b.area - a.area);
+  const totArea = list.reduce((s,r) => s+r.area, 0);
+  const totTons = list.reduce((s,r) => s+r.tons, 0);
+
+  grid.innerHTML = list.map(r => `
+    <div class="stats-row">
+      <div>
+        <div class="stats-row-name">${eh(r.name)}</div>
+        <div style="font-size:11px;color:var(--text-dim);margin-top:2px">${r.count} 筆記錄</div>
+      </div>
+      <div class="stats-row-area">${r.area.toFixed(1)} m²</div>
+      <div class="stats-row-tons">${r.tons.toFixed(2)} T</div>
+    </div>`).join('') + `
+    <div class="stats-total">
+      <div style="font-size:14px;font-weight:800;color:var(--accent)">合計</div>
+      <div class="stats-row-area" style="font-size:15px">${totArea.toFixed(1)} m²</div>
+      <div class="stats-row-tons" style="font-size:15px">${totTons.toFixed(2)} T</div>
+    </div>`;
+
+  document.getElementById('statsMo').classList.add('open');
+}
+function closeStatsMo() { document.getElementById('statsMo').classList.remove('open'); }
+
+// ══════════════════════════════════════════
+//  OFFLINE DETECTION
+// ══════════════════════════════════════════
+function updateOfflineBanner() {
+  const banner = document.getElementById('offlineBanner');
+  if (!banner) return;
+  if (!navigator.onLine) {
+    banner.classList.add('show');
+  } else {
+    banner.classList.remove('show');
+    // if firebase connected, try to re-sync pending local changes
+    if (fbConnected) updateSyncUI('synced');
+  }
+}
+window.addEventListener('online',  () => { updateOfflineBanner(); showToast('網路已恢復 ✓', 'success'); });
+window.addEventListener('offline', () => { updateOfflineBanner(); showToast('已離線，資料暫存本機', 'error'); });
+
 // Stats
 function updateStats(){
   document.getElementById('stR').textContent=records.length;
@@ -956,9 +1116,9 @@ function showToast(msg,type=''){
 }
 
 // Modal click-outside
-['matMo','delMo'].forEach(id=>{
+['matMo','delMo','statsMo'].forEach(id=>{
   document.getElementById(id).addEventListener('click',function(e){
-    if(e.target===this){this.id==='matMo'?closeMatMo():closeDelMo();}
+    if(e.target===this){if(this.id==='matMo')closeMatMo();else if(this.id==='delMo')closeDelMo();else closeStatsMo();}
   });
 });
 
@@ -968,6 +1128,7 @@ function showToast(msg,type=''){
 loadLocal();
 render();
 initFirebase().then(updateSyncUI).catch(()=>updateSyncUI());
+updateOfflineBanner();
 </script>
 </body>
 </html>
