@@ -6,7 +6,6 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>施工面積管理</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{
   --bg:#f0f4f8;--surface:#ffffff;--surface2:#f5f7fa;--border:#dde3ec;
@@ -145,6 +144,22 @@ table.dt tbody tr:last-child td{border-bottom:none;}
 .toast.success{background:var(--success);}
 .toast.error{background:var(--danger);}
 
+.btn-print{background:#2563eb;color:#fff;font-size:12px;font-weight:600;padding:7px 14px;border-radius:8px;border:none;cursor:pointer;display:flex;align-items:center;gap:5px;transition:all .18s;}
+.btn-print:active{background:#1d4ed8;}
+.btn-print svg{width:14px;height:14px;}
+
+/* ── PRINT STYLES ── */
+@media print{
+  body *{visibility:hidden;}
+  #print-area,#print-area *{visibility:visible;}
+  #print-area{
+    position:fixed;inset:0;
+    background:#fff;
+    font-family:'Microsoft YaHei','PingFang TC',sans-serif;
+    color:#000;
+    padding:0;
+  }
+}
 @media(max-width:390px){.info-grid-3{grid-template-columns:1fr 1fr;}.topbar-title{font-size:13px;}}
 </style>
 </head>
@@ -153,15 +168,10 @@ table.dt tbody tr:last-child td{border-bottom:none;}
 <div class="topbar">
   <div class="topbar-title">📋 施工面積管理</div>
   <div class="topbar-right">
-    <div class="sync-pill" id="syncPill" onclick="openFbModal()">
+    <div class="sync-pill" id="syncPill" style="pointer-events:none;cursor:default">
       <div class="sync-dot"></div><span id="syncLabel">本地</span>
     </div>
-    <button class="btn btn-ghost" onclick="openMaterialModal()" style="padding:7px 10px">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>料別
-    </button>
-    <button class="btn btn-success" onclick="exportAll()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>匯出
-    </button>
+
   </div>
 </div>
 
@@ -198,22 +208,9 @@ table.dt tbody tr:last-child td{border-bottom:none;}
   </div>
 </div></div>
 
-<!-- Firebase Modal -->
-<div class="mo" id="fbMo"><div class="md" style="max-width:420px">
-  <h3>🔥 Firebase 雲端同步設定</h3>
-  <div class="fb-status" id="fbStatusBox">未連線 — 使用本地儲存</div>
-  <div class="fb-hint">
-    前往 <a href="https://console.firebase.google.com" target="_blank">Firebase Console</a>
-    → 新建專案 → 新增 Web App → 複製 firebaseConfig 各欄位貼入下方。<br>
-    Firestore 規則請設為測試模式（allow read, write: if true）。
-  </div>
-  <div class="fb-fields" id="fbFields"></div>
-  <div class="md-actions">
-    <button class="btn btn-ghost" onclick="closeFbMo()">關閉</button>
-    <button class="btn btn-danger" onclick="clearFbConfig()">清除設定</button>
-    <button class="btn btn-success" onclick="saveFbConfig()">儲存並連線</button>
-  </div>
-</div></div>
+
+<!-- Print Area -->
+<div id="print-area" style="display:none"></div>
 
 <div class="toast" id="toast"></div>
 
@@ -224,19 +221,10 @@ table.dt tbody tr:last-child td{border-bottom:none;}
 const STORE_KEY  = 'cr_v5';
 const MAT_KEY    = 'mat_v2';
 const LOC_KEY    = 'loc_v1';
-const FB_KEY     = 'fb_cfg_v2';
 const WEEKDAYS   = ['日','一','二','三','四','五','六'];
 const DEF_MATS   = ['再生3/8"','再生3/4"','新料3/8"','新料3/4"','改三3/4"','改三1"'];
 const DEF_LOCS   = ['板橋'];
 const DENSITY    = 2.3;
-const FB_FIELDS  = [
-  {k:'apiKey',        l:'API Key'},
-  {k:'authDomain',    l:'Auth Domain'},
-  {k:'projectId',     l:'Project ID'},
-  {k:'storageBucket', l:'Storage Bucket'},
-  {k:'messagingSenderId', l:'Messaging Sender ID'},
-  {k:'appId',         l:'App ID'},
-];
 
 // ══════════════════════════════════════════
 //  STATE
@@ -279,7 +267,7 @@ function seedDemo() {
   }];
   saveLocal();
 }
-// 組合顯示用派案名稱
+// 組合完整派案名稱（用於列印/Excel標題）
 function buildCaseNo(rec) {
   const loc = rec.caseLocation || '';
   const num = rec.caseNum || '';
@@ -287,24 +275,35 @@ function buildCaseNo(rec) {
   if (!num) return `${loc}派案`;
   return `${loc}第${num}派案`;
 }
+// 卡片 badge 只顯示編號部分（地點已由左邊 badge 顯示）
+function buildCaseNumLabel(rec) {
+  const num = rec.caseNum || '';
+  if (!num) return '派案';
+  return `第${num}派案`;
+}
 
 // ══════════════════════════════════════════
-//  FIREBASE DYNAMIC INIT
+//  FIREBASE INIT (hardcoded config)
 // ══════════════════════════════════════════
 async function initFirebase() {
-  const cfg = JSON.parse(localStorage.getItem(FB_KEY)||'{}');
-  if (!cfg.apiKey || cfg.apiKey === 'YOUR_API_KEY') return;
+  const cfg = {
+    apiKey:            "AIzaSyCzLwCL6nubH14f-l4Ss3jLGK2JREbvPOs",
+    authDomain:        "ac-area-management.firebaseapp.com",
+    projectId:         "ac-area-management",
+    storageBucket:     "ac-area-management.firebasestorage.app",
+    messagingSenderId: "94710107708",
+    appId:             "1:94710107708:web:29efa5a0647bd54b5e7d39",
+    measurementId:     "G-F4PESK6HKN"
+  };
 
   try {
-    // Dynamically import Firebase modules
     const [fbApp_m, fbFS_m] = await Promise.all([
-      import('https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js'),
-      import('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js'),
+      import('https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js'),
+      import('https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js'),
     ]);
     const { initializeApp, getApps, getApp } = fbApp_m;
     const { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot } = fbFS_m;
 
-    // Avoid re-init
     fbApp = getApps().length ? getApp() : initializeApp(cfg);
     fbDB  = getFirestore(fbApp);
 
@@ -439,7 +438,7 @@ function renderCard(rec){
   <div class="record-card-header" onclick="toggle(${rec.id})">
     <div class="record-meta">
       <span class="card-loc-badge" id="tloc-${rec.id}">${eh(rec.caseLocation||'板橋')}</span>
-      <span class="card-case-badge" id="tcn-${rec.id}">${eh(buildCaseNo(rec))}</span>
+      <span class="card-case-badge" id="tcn-${rec.id}">${eh(buildCaseNumLabel(rec))}</span>
       <span class="tag accent" id="td-${rec.id}">${eh(rec.date||'--')}</span>
       <span class="tag"        id="tw-${rec.id}">${eh(rec.weekday||'')}</span>
       <span class="tag warn"   id="ts-${rec.id}">${eh(rec.shift||'--')}</span>
@@ -542,8 +541,8 @@ function renderCard(rec){
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:13px;height:13px"><path d="M12 5v14M5 12h14"/></svg>新增路段
       </button>
     </div>
-    <button class="btn btn-warn" style="align-self:flex-end;margin-top:2px;font-size:11px;padding:6px 10px" onclick="exportOne(${rec.id})">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>匯出此記錄
+    <button class="btn btn-print" style="align-self:flex-end;margin-top:2px" onclick="printRec(${rec.id})">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><path d="M6 14h12v8H6z"/></svg>列印
     </button>
   </div>
 </div>`;
@@ -625,7 +624,7 @@ function uCaseField(id, field, val) {
   const rec = gr(id); if (!rec) return;
   rec[field] = val;
   const badge = document.getElementById(`tcn-${id}`);
-  if (badge) badge.textContent = buildCaseNo(rec);
+  if (badge) badge.textContent = buildCaseNumLabel(rec);
   // 同步更新地點 badge
   if (field === 'caseLocation') {
     const locBadge = document.getElementById(`tloc-${id}`);
@@ -750,172 +749,167 @@ function addMat(){
 }
 function removeMat(i){const nm=materials.splice(i,1)[0];persistMats();renderMatList();showToast(`已刪除「${nm}」`);}
 
-// Firebase modal
-function openFbModal(){
-  const cfg=JSON.parse(localStorage.getItem(FB_KEY)||'{}');
-  document.getElementById('fbFields').innerHTML=FB_FIELDS.map(f=>`
-    <div class="fb-row"><label>${f.l}</label>
-    <input id="fb-${f.k}" value="${ea(cfg[f.k]||'')}" placeholder="${f.l}…"></div>`).join('');
-  const sb=document.getElementById('fbStatusBox');
-  sb.className='fb-status '+(fbConnected?'connected':'disconnected');
-  sb.textContent=fbConnected?'✅ Firebase 已連線，資料即時同步中':'❌ 未連線 — 使用本地儲存';
-  document.getElementById('fbMo').classList.add('open');
-}
-function closeFbMo(){document.getElementById('fbMo').classList.remove('open');}
-function saveFbConfig(){
-  const cfg={};
-  FB_FIELDS.forEach(f=>{cfg[f.k]=document.getElementById(`fb-${f.k}`).value.trim();});
-  localStorage.setItem(FB_KEY,JSON.stringify(cfg));
-  showToast('設定已儲存，正在連線…');
-  closeFbMo();
-  setTimeout(()=>initFirebase().then(updateSyncUI),300);
-}
-function clearFbConfig(){
-  localStorage.removeItem(FB_KEY); fbConnected=false; updateSyncUI();
-  closeFbMo(); showToast('已清除 Firebase 設定');
-}
 
 // Stats
 function updateStats(){
   document.getElementById('stR').textContent=records.length;
 }
 
+
+
 // ══════════════════════════════════════════
-//  EXCEL EXPORT — PROFESSIONAL LAYOUT
+//  PRINT
 // ══════════════════════════════════════════
-function buildXLSX(recs){
-  const wb=XLSX.utils.book_new();
+function printRec(id) {
+  const rec = gr(id); if (!rec) return;
+  const ta = recTot(rec,'area'), tt = recTot(rec,'tons'), tm = recTot(rec,'mill');
+  const rows = rec.rows;
 
-  recs.forEach((rec,ri)=>{
-    const rows=rec.rows;
-    const ta=+recTot(rec,'area').toFixed(1);
-    const tt=+recTot(rec,'tons').toFixed(2);
-    const tm=+recTot(rec,'mill').toFixed(2);
+  const rowsHtml = rows.map((row, i) => {
+    const a = +row.area||0, t = row.thickness||'';
+    const tons = a&&t ? calcTons(a,t).toFixed(2) : '—';
+    const mill = a&&t ? calcMill(a,t).toFixed(2) : '—';
+    return `<tr>
+      <td style="text-align:center">${i+1}</td>
+      <td>${eh(row.segment||'')}</td>
+      <td style="text-align:center">${a||'—'}</td>
+      <td style="text-align:center">${t||'—'}</td>
+      <td style="text-align:center">${tons}</td>
+      <td style="text-align:center">${mill}</td>
+    </tr>`;
+  }).join('');
 
-    // Column layout:
-    // A=順序(5)  B=施工路段(32)  C=面積(12)  D=厚度(10)  E=噸數(13)  F=刨除(13)
+  const html = `
+  <style>
+    @page { size: A4 portrait; margin: 16mm 14mm; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Microsoft YaHei','PingFang TC','Noto Sans TC',sans-serif; background:#fff; color:#1e293b; }
+    .p-wrap { padding: 0; }
+    /* Header */
+    .p-header { display:flex; align-items:center; justify-content:space-between; border-bottom:3px solid #1e3a6e; padding-bottom:10px; margin-bottom:14px; }
+    .p-title { font-size:20px; font-weight:900; color:#1e3a6e; letter-spacing:1px; }
+    .p-subtitle { font-size:12px; color:#64748b; margin-top:3px; }
+    .p-logo { font-size:28px; }
+    /* Info grid */
+    .p-info { display:grid; grid-template-columns:1fr 1fr 1fr; gap:0; border:1.5px solid #cbd5e1; border-radius:8px; overflow:hidden; margin-bottom:16px; }
+    .p-info-item { padding:8px 12px; border-right:1px solid #cbd5e1; border-bottom:1px solid #cbd5e1; }
+    .p-info-item:nth-child(3n) { border-right:none; }
+    .p-info-item:nth-last-child(-n+3) { border-bottom:none; }
+    .p-info-item.full { grid-column:1/-1; border-right:none; }
+    .p-info-label { font-size:9px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#94a3b8; margin-bottom:3px; }
+    .p-info-val { font-size:13px; font-weight:700; color:#1e293b; }
+    /* Table */
+    .p-tbl-title { font-size:12px; font-weight:700; color:#d97706; background:#fffbeb; border-left:4px solid #d97706; padding:5px 10px; border-radius:4px; margin-bottom:8px; }
+    table { width:100%; border-collapse:collapse; font-size:12px; }
+    thead tr { background:#1e3a6e; color:#fff; }
+    thead th { padding:9px 8px; text-align:center; font-weight:700; font-size:11px; letter-spacing:.5px; }
+    thead th:nth-child(2) { text-align:left; }
+    tbody tr:nth-child(odd) { background:#f8fafc; }
+    tbody tr:nth-child(even) { background:#fff; }
+    tbody td { padding:8px 7px; border-bottom:1px solid #e2e8f0; font-size:12px; }
+    tbody td:nth-child(2) { text-align:left; }
+    .sub-row { background:#eff6ff !important; font-weight:700; color:#1e40af; }
+    .sub-row td { border-top:2px solid #bfdbfe; border-bottom:2px solid #bfdbfe; padding:9px 7px; }
+    /* Summary */
+    .p-summary { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:16px; }
+    .p-sum-box { border:2px solid #e2e8f0; border-radius:8px; padding:12px 16px; text-align:center; }
+    .p-sum-box.highlight { border-color:#1e3a6e; background:#f0f4ff; }
+    .p-sum-label { font-size:10px; font-weight:700; color:#64748b; letter-spacing:1px; text-transform:uppercase; margin-bottom:4px; }
+    .p-sum-val { font-size:24px; font-weight:900; color:#1e3a6e; }
+    .p-sum-unit { font-size:12px; color:#94a3b8; margin-left:2px; }
+    /* Footer */
+    .p-footer { margin-top:20px; padding-top:10px; border-top:1px solid #e2e8f0; display:flex; justify-content:space-between; font-size:10px; color:#94a3b8; }
+    .sign-box { border-top:1px solid #94a3b8; width:120px; text-align:center; padding-top:4px; margin-top:30px; font-size:10px; color:#64748b; }
+    .sign-row { display:flex; gap:40px; margin-top:24px; }
+  </style>
+  <div class="p-wrap">
+    <div class="p-header">
+      <div>
+        <div class="p-title">🏗️ ${eh(buildCaseNo(rec))} 施工面積記錄</div>
+        <div class="p-subtitle">${eh(rec.zone||'')} ${rec.material?'　料別：'+eh(rec.material):''}</div>
+      </div>
+      <div class="p-logo">📋</div>
+    </div>
 
-    const aoa=[];
+    <div class="p-info">
+      <div class="p-info-item">
+        <div class="p-info-label">日期</div>
+        <div class="p-info-val">${eh(rec.date||'—')}</div>
+      </div>
+      <div class="p-info-item">
+        <div class="p-info-label">星期</div>
+        <div class="p-info-val">${eh(rec.weekday||'—')}</div>
+      </div>
+      <div class="p-info-item">
+        <div class="p-info-label">日 / 夜</div>
+        <div class="p-info-val">${eh(rec.shift||'—')}</div>
+      </div>
+      <div class="p-info-item">
+        <div class="p-info-label">刨除時間</div>
+        <div class="p-info-val">${eh(rec.milling||'—')}</div>
+      </div>
+      <div class="p-info-item">
+        <div class="p-info-label">鋪設時間</div>
+        <div class="p-info-val">${eh(rec.paving||'—')}</div>
+      </div>
+      <div class="p-info-item">
+        <div class="p-info-label">料別</div>
+        <div class="p-info-val">${eh(rec.material||'—')}</div>
+      </div>
+    </div>
 
-    // ── R0: 大標題
-    aoa.push([`${buildCaseNo(rec)} 　施工面積記錄`, '', '', '', '', '']);
+    <div class="p-tbl-title">📊 施工路段明細</div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:40px">順序</th>
+          <th>施工路段</th>
+          <th style="width:72px">面積(m²)</th>
+          <th style="width:66px">厚度(cm)</th>
+          <th style="width:72px">噸數(T)</th>
+          <th style="width:76px">刨除(-0.5)</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rowsHtml}
+        <tr class="sub-row">
+          <td colspan="2" style="text-align:right;padding-right:10px;font-size:11px;letter-spacing:.5px">合　計</td>
+          <td style="text-align:center">${n(ta,1)}</td>
+          <td></td>
+          <td style="text-align:center">${n(tt)}</td>
+          <td style="text-align:center">${n(tm)}</td>
+        </tr>
+      </tbody>
+    </table>
 
-    // ── R1: 空白
-    aoa.push(['','','','','','']);
+    <div class="p-summary">
+      <div class="p-sum-box highlight">
+        <div class="p-sum-label">總面積</div>
+        <div><span class="p-sum-val">${n(ta,1)}</span><span class="p-sum-unit">m²</span></div>
+      </div>
+      <div class="p-sum-box highlight">
+        <div class="p-sum-label">總噸數</div>
+        <div><span class="p-sum-val">${n(tt)}</span><span class="p-sum-unit">T</span></div>
+      </div>
+    </div>
 
-    // ── R2: 工程資訊 上排標題
-    aoa.push(['日期','星期','日 / 夜','刨除時間','鋪設時間','工區路段']);
+    <div class="sign-row">
+      <div class="sign-box">製表人</div>
+      <div class="sign-box">主管</div>
+      <div class="sign-box">確認</div>
+    </div>
 
-    // ── R3: 工程資訊 上排值
-    aoa.push([rec.date||'', rec.weekday||'', rec.shift||'', rec.milling||'', rec.paving||'', rec.zone||'']);
+    <div class="p-footer">
+      <span>列印時間：${new Date().toLocaleString('zh-TW')}</span>
+      <span>${eh(buildCaseNo(rec))} — ${eh(rec.zone||'')}</span>
+    </div>
+  </div>`;
 
-    // ── R4: 工程資訊 下排標題
-    aoa.push(['料別','','','','','']);
-
-    // ── R5: 工程資訊 下排值
-    aoa.push([rec.material||'','','','','','']);
-
-    // ── R6: 空白
-    aoa.push(['','','','','','']);
-
-    // ── R7: 表格標題列
-    aoa.push(['順序','施工路段','面積 (m²)','厚度 (cm)','噸數 (T)','刨除 (-0.5)']);
-
-    // ── R8+: 資料列
-    const dataStart = 8;
-    rows.forEach((row,i)=>{
-      const a=+row.area||0, t=row.thickness||'';
-      aoa.push([
-        i+1,
-        row.segment||'',
-        a||'',
-        t!==''?+t:'',
-        a&&t?+calcTons(a,t):'',
-        a&&t?+calcMill(a,t):'',
-      ]);
-    });
-
-    // ── Sub-total
-    const subR=dataStart+rows.length;
-    aoa.push(['','小　計', ta, '', tt, tm]);
-
-    // ── R blank
-    aoa.push(['','','','','','']);
-
-    // ── Summary
-    const sumR=subR+2;
-    aoa.push(['總面積 (m²)', '', ta, '總噸數 (T)', '', tt]);
-
-    // ── Build sheet
-    const ws=XLSX.utils.aoa_to_sheet(aoa);
-
-    // ── Column widths
-    ws['!cols']=[
-      {wch:7},   // A 順序
-      {wch:34},  // B 施工路段
-      {wch:12},  // C 面積
-      {wch:10},  // D 厚度
-      {wch:12},  // E 噸數
-      {wch:13},  // F 刨除
-    ];
-
-    // ── Row heights
-    const rh=new Array(aoa.length).fill(null).map(()=>({hpt:22}));
-    rh[0]={hpt:44};   // title
-    rh[1]={hpt:6};    // spacer
-    rh[2]={hpt:22};   // label row
-    rh[3]={hpt:26};   // value row
-    rh[4]={hpt:20};   // label row2
-    rh[5]={hpt:26};   // value row2
-    rh[6]={hpt:8};    // spacer
-    rh[7]={hpt:26};   // table header
-    for(let i=0;i<rows.length;i++) rh[dataStart+i]={hpt:24};
-    rh[subR]={hpt:24};
-    rh[subR+1]={hpt:6};
-    rh[sumR]={hpt:26};
-    ws['!rows']=rh;
-
-    // ── Merges
-    const m=[];
-    m.push({s:{r:0,c:0},e:{r:0,c:5}});            // title full width
-    m.push({s:{r:4,c:0},e:{r:4,c:5}});            // 料別 label full
-    m.push({s:{r:5,c:0},e:{r:5,c:5}});            // 料別 value full
-    // summary
-    m.push({s:{r:sumR,c:0},e:{r:sumR,c:1}});
-    m.push({s:{r:sumR,c:3},e:{r:sumR,c:4}});
-    ws['!merges']=m;
-
-    // ── Apply number format to numeric cells
-    for(let i=0;i<rows.length;i++){
-      ['C','E','F'].forEach(col=>{
-        const addr=col+(dataStart+i+1);
-        if(ws[addr]&&ws[addr].t==='n') ws[addr].z='#,##0.00';
-      });
-    }
-    ['C','E','F'].forEach(col=>{
-      const addr=col+(subR+1);
-      if(ws[addr]&&ws[addr].t==='n') ws[addr].z='#,##0.00';
-    });
-    ['C','F'].forEach((col,ci)=>{
-      const addr=col+(sumR+1);
-      if(ws[addr]&&ws[addr].t==='n') ws[addr].z='#,##0.00';
-    });
-
-    const name=(rec.zone||`記錄${ri+1}`).substring(0,28);
-    XLSX.utils.book_append_sheet(wb,ws,name);
-  });
-  return wb;
-}
-
-function exportAll(){
-  if(!records.length){showToast('尚無記錄可匯出','error');return;}
-  XLSX.writeFile(buildXLSX(records),`施工面積_全部_${today()}.xlsx`);
-  showToast(`已匯出 ${records.length} 筆記錄`,'success');
-}
-function exportOne(id){
-  const rec=gr(id);if(!rec)return;
-  XLSX.writeFile(buildXLSX([rec]),`施工面積_${rec.zone||rec.date||id}_${today()}.xlsx`);
-  showToast('已匯出此記錄','success');
+  const pa = document.getElementById('print-area');
+  pa.innerHTML = html;
+  pa.style.display = 'block';
+  window.print();
+  pa.style.display = 'none';
 }
 
 // ══════════════════════════════════════════
@@ -933,9 +927,9 @@ function showToast(msg,type=''){
 }
 
 // Modal click-outside
-['matMo','delMo','fbMo'].forEach(id=>{
+['matMo','delMo'].forEach(id=>{
   document.getElementById(id).addEventListener('click',function(e){
-    if(e.target===this){this.id==='matMo'?closeMatMo():this.id==='delMo'?closeDelMo():closeFbMo();}
+    if(e.target===this){this.id==='matMo'?closeMatMo():closeDelMo();}
   });
 });
 
@@ -945,48 +939,6 @@ function showToast(msg,type=''){
 loadLocal();
 render();
 initFirebase().then(updateSyncUI).catch(()=>updateSyncUI());
-
 </script>
-
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
-  import { getFirestore, doc, setDoc, getDoc, collection } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
-
-  const firebaseConfig = {
-    apiKey: "AIzaSyCzlWCL6nubH14f-l4Ss3jlGK2JREbvPOs",
-    authDomain: "ac-area-management.firebaseapp.com",
-    projectId: "ac-area-management",
-    storageBucket: "ac-area-management.firebasestorage.app",
-    messagingSenderId: "94710107788",
-    appId: "1:94710107788:web:29efa5a0647bd54b5e7d39",
-    measurementId: "G-F4PESK6HKN"
-  };
-
-  try {
-    const app = initializeApp(firebaseConfig);
-    window.db = getFirestore(app);
-    
-    // 強制把配置寫入 localStorage，騙過原本的程式碼
-    localStorage.setItem('firebaseConfig', JSON.stringify(firebaseConfig));
-    
-    console.log("🔥 Firebase 強制對接成功");
-
-    // 延遲一秒執行，確保原本的 js 已經載入完成
-    setTimeout(() => {
-        if (typeof initFirebase === 'function') {
-            initFirebase().then(() => {
-                console.log("✅ 同步邏輯已啟動");
-                if (typeof updateSyncUI === 'function') updateSyncUI();
-            }).catch(err => {
-                console.error("同步失敗:", err);
-            });
-        }
-    }, 1000);
-
-  } catch (error) {
-    console.error("初始化出錯:", error);
-  }
-</script>
-
 </body>
 </html>
