@@ -460,8 +460,8 @@ function matOpts(sel){
 function renderCard(rec){
   const ta=recTot(rec,'area'), tt=recTot(rec,'tons'), tm=recTot(rec,'mill');
   return `<div class="record-card" id="card-${rec.id}">
-  <div class="record-card-header" onclick="toggle(${rec.id})" style="user-select:none">
-    <div class="record-meta">
+  <div class="record-card-header" style="user-select:none">
+    <div class="record-meta" onclick="toggle(${rec.id})" style="cursor:pointer;flex:1;min-width:0">
       <span class="card-loc-badge" id="tloc-${rec.id}">${eh(rec.caseLocation||'板橋')}</span>
       <span class="card-case-badge" id="tcn-${rec.id}">${eh(buildCaseNumLabel(rec))}</span>
       <span class="tag accent" id="td-${rec.id}">${eh(rec.date||'--')}</span>
