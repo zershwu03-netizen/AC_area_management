@@ -61,7 +61,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .shift-btn.active-night{background:#eff6ff;border-color:#3b82f6;color:#2563eb;}
 /* location badge in header — distinct from case badge */
 .card-loc-badge{font-size:11px;font-weight:800;color:#fff;background:var(--accent);border-radius:5px;padding:2px 8px;white-space:nowrap;flex-shrink:0;letter-spacing:.5px;}
-.card-summary{display:flex;gap:10px;padding:8px 13px 10px;align-items:center;flex-wrap:wrap;border-top:1px solid var(--border);background:var(--surface2);}
+.card-summary{display:flex;flex-direction:column;gap:6px;padding:8px 13px 10px;border-top:1px solid var(--border);background:var(--surface2);}
 .card-sum-item{display:flex;align-items:baseline;gap:3px;}
 .card-sum-label{font-size:10px;color:var(--text-dim);}
 .card-sum-val{font-size:13px;font-weight:700;color:var(--accent);}
@@ -476,7 +476,6 @@ function renderCard(rec){
       <span class="tag accent" id="td-${rec.id}">${eh(rec.date||'--')}</span>
       <span class="tag"        id="tw-${rec.id}">${eh(rec.weekday||'')}</span>
       <span class="tag warn"   id="ts-${rec.id}">${eh(rec.shift||'--')}</span>
-      <span class="record-title" id="tz-${rec.id}">${eh(rec.zone||'未命名工區')}</span>
     </div>
     <div class="record-actions">
       <div class="icon-btn del" onclick="event.stopPropagation();askDel(${rec.id})">
@@ -488,6 +487,8 @@ function renderCard(rec){
     </div>
   </div>
   <div class="card-summary" id="cs-${rec.id}" onclick="event.stopPropagation()">
+    <div style="width:100%;font-size:13px;font-weight:700;color:#1e293b;margin-bottom:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" id="tz-${rec.id}">${eh(rec.zone||'未填工區路段')}</div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
     <div class="card-sum-item">
       <span class="card-sum-label">面積</span>
       <span class="card-sum-val" id="cs-a-${rec.id}">${n(ta,1)}</span>
@@ -504,6 +505,7 @@ function renderCard(rec){
       <span class="card-sum-label">刨除</span>
       <span class="card-sum-val" id="cs-m-${rec.id}">${n(tm)}</span>
       <span class="card-sum-unit">T</span>
+    </div>
     </div>
   </div>
   <div class="record-body" id="bd-${rec.id}" onclick="event.stopPropagation()">
@@ -821,46 +823,43 @@ function printRec(id) {
     .p-wrap { padding: 0; }
     /* Header */
     .p-header { display:flex; align-items:center; justify-content:space-between; border-bottom:3px solid #1e3a6e; padding-bottom:10px; margin-bottom:14px; }
-    .p-title { font-size:20px; font-weight:900; color:#1e3a6e; letter-spacing:1px; }
-    .p-subtitle { font-size:12px; color:#64748b; margin-top:3px; }
+    .p-title { font-size:22px; font-weight:900; color:#1e3a6e; letter-spacing:1px; }
+    .p-subtitle { font-size:16px; font-weight:700; color:#334155; margin-top:5px; letter-spacing:.5px; }
     .p-logo { font-size:28px; }
     /* Info grid */
     .p-info { display:grid; grid-template-columns:1fr 1fr 1fr; gap:0; border:1.5px solid #cbd5e1; border-radius:8px; overflow:hidden; margin-bottom:16px; }
-    .p-info-item { padding:8px 12px; border-right:1px solid #cbd5e1; border-bottom:1px solid #cbd5e1; }
+    .p-info-item { padding:9px 13px; border-right:1px solid #cbd5e1; border-bottom:1px solid #cbd5e1; }
     .p-info-item:nth-child(3n) { border-right:none; }
     .p-info-item:nth-last-child(-n+3) { border-bottom:none; }
-    .p-info-item.full { grid-column:1/-1; border-right:none; }
     .p-info-label { font-size:9px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#94a3b8; margin-bottom:3px; }
-    .p-info-val { font-size:13px; font-weight:700; color:#1e293b; }
+    .p-info-val { font-size:15px; font-weight:700; color:#1e293b; }
     /* Table */
-    .p-tbl-title { font-size:12px; font-weight:700; color:#d97706; background:#fffbeb; border-left:4px solid #d97706; padding:5px 10px; border-radius:4px; margin-bottom:8px; }
-    table { width:100%; border-collapse:collapse; font-size:12px; }
+    .p-tbl-title { font-size:14px; font-weight:700; color:#d97706; background:#fffbeb; border-left:4px solid #d97706; padding:6px 11px; border-radius:4px; margin-bottom:9px; }
+    table { width:100%; border-collapse:collapse; }
     thead tr { background:#1e3a6e; color:#fff; }
-    thead th { padding:9px 8px; text-align:center; font-weight:700; font-size:11px; letter-spacing:.5px; }
+    thead th { padding:10px 8px; text-align:center; font-weight:700; font-size:13px; letter-spacing:.5px; }
     thead th:nth-child(2) { text-align:left; }
     tbody tr:nth-child(odd) { background:#f8fafc; }
     tbody tr:nth-child(even) { background:#fff; }
-    tbody td { padding:8px 7px; border-bottom:1px solid #e2e8f0; font-size:12px; }
+    tbody td { padding:10px 8px; border-bottom:1px solid #e2e8f0; font-size:14px; }
     tbody td:nth-child(2) { text-align:left; }
     .sub-row { background:#eff6ff !important; font-weight:700; color:#1e40af; }
-    .sub-row td { border-top:2px solid #bfdbfe; border-bottom:2px solid #bfdbfe; padding:9px 7px; }
+    .sub-row td { border-top:2px solid #bfdbfe; border-bottom:2px solid #bfdbfe; padding:10px 8px; font-size:14px; }
     /* Summary */
     .p-summary { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:16px; }
-    .p-sum-box { border:2px solid #e2e8f0; border-radius:8px; padding:12px 16px; text-align:center; }
+    .p-sum-box { border:2px solid #e2e8f0; border-radius:8px; padding:14px 16px; text-align:center; }
     .p-sum-box.highlight { border-color:#1e3a6e; background:#f0f4ff; }
-    .p-sum-label { font-size:10px; font-weight:700; color:#64748b; letter-spacing:1px; text-transform:uppercase; margin-bottom:4px; }
-    .p-sum-val { font-size:24px; font-weight:900; color:#1e3a6e; }
-    .p-sum-unit { font-size:12px; color:#94a3b8; margin-left:2px; }
+    .p-sum-label { font-size:11px; font-weight:700; color:#64748b; letter-spacing:1px; text-transform:uppercase; margin-bottom:5px; }
+    .p-sum-val { font-size:28px; font-weight:900; color:#1e3a6e; }
+    .p-sum-unit { font-size:14px; color:#94a3b8; margin-left:2px; }
     /* Footer */
-    .p-footer { margin-top:20px; padding-top:10px; border-top:1px solid #e2e8f0; display:flex; justify-content:space-between; font-size:10px; color:#94a3b8; }
-    .sign-box { border-top:1px solid #94a3b8; width:120px; text-align:center; padding-top:4px; margin-top:30px; font-size:10px; color:#64748b; }
-    .sign-row { display:flex; gap:40px; margin-top:24px; }
+    .p-footer { margin-top:16px; padding-top:10px; border-top:1px solid #e2e8f0; display:flex; justify-content:space-between; font-size:11px; color:#94a3b8; }
   </style>
   <div class="p-wrap">
     <div class="p-header">
       <div>
         <div class="p-title">🏗️ ${eh(buildCaseNo(rec))} 施工面積記錄</div>
-        <div class="p-subtitle">${eh(rec.zone||'')} ${rec.material?'　料別：'+eh(rec.material):''}</div>
+        <div class="p-subtitle">${eh(rec.zone||'')}${rec.material ? '　　料別：' + eh(rec.material) : ''}</div>
       </div>
       <div class="p-logo">📋</div>
     </div>
@@ -896,18 +895,18 @@ function printRec(id) {
     <table>
       <thead>
         <tr>
-          <th style="width:40px">順序</th>
+          <th style="width:44px">順序</th>
           <th>施工路段</th>
-          <th style="width:72px">面積(m²)</th>
-          <th style="width:66px">厚度(cm)</th>
-          <th style="width:72px">噸數(T)</th>
-          <th style="width:76px">刨除(-0.5)</th>
+          <th style="width:76px">面積(m²)</th>
+          <th style="width:70px">厚度(cm)</th>
+          <th style="width:76px">噸數(T)</th>
+          <th style="width:80px">刨除(-0.5)</th>
         </tr>
       </thead>
       <tbody>
         ${rowsHtml}
         <tr class="sub-row">
-          <td colspan="2" style="text-align:right;padding-right:10px;font-size:11px;letter-spacing:.5px">合　計</td>
+          <td colspan="2" style="text-align:right;padding-right:12px;font-size:13px;letter-spacing:.5px">合　計</td>
           <td style="text-align:center">${n(ta,1)}</td>
           <td></td>
           <td style="text-align:center">${n(tt)}</td>
@@ -925,12 +924,6 @@ function printRec(id) {
         <div class="p-sum-label">總噸數</div>
         <div><span class="p-sum-val">${n(tt)}</span><span class="p-sum-unit">T</span></div>
       </div>
-    </div>
-
-    <div class="sign-row">
-      <div class="sign-box">製表人</div>
-      <div class="sign-box">主管</div>
-      <div class="sign-box">確認</div>
     </div>
 
     <div class="p-footer">
