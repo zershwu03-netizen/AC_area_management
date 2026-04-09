@@ -947,16 +947,13 @@ render();
 initFirebase().then(updateSyncUI).catch(()=>updateSyncUI());
 </script>
 <script type="module">
-  // Import the functions you need from the SDKs you need
+  // 1. 引入必要的 Firebase 模組 (包含資料庫 Firestore)
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
-  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-analytics.js";
-  // TODO: Add SDKs for Firebase products that you want to use
-  // https://firebase.google.com/docs/web/setup#available-libraries
+  import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
 
-  // Your web app's Firebase configuration
-  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+  // 你的配置資訊 (你截圖中的這一段)
   const firebaseConfig = {
-    apiKey: "AIzaSyCzLwCL6nubH14f-l4Ss3jLGK2JREbvPOs",
+    apiKey: "AIzaSyCzLwCL6nubH14f-l4Ss3jLGK2JREbvPOs", // 這裡請保留你截圖中的正確數值
     authDomain: "ac-area-management.firebaseapp.com",
     projectId: "ac-area-management",
     storageBucket: "ac-area-management.firebasestorage.app",
@@ -965,9 +962,19 @@ initFirebase().then(updateSyncUI).catch(()=>updateSyncUI());
     measurementId: "G-F4PESK6HKN"
   };
 
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-  const analytics = getAnalytics(app);
+  // 初始化 Firebase 並導出到全域，讓你原本的程式碼 (initFirebase) 可以抓到
+  try {
+    const app = initializeApp(firebaseConfig);
+    window.db = getFirestore(app); // 關鍵：將 db 掛載到 window
+    console.log("Firebase 模組載入成功");
+    
+    // 如果你原本的 947 行需要手動觸發，可以在這裡補上
+    if (typeof initFirebase === 'function') {
+      initFirebase().then(updateSyncUI).catch(updateSyncUI);
+    }
+  } catch (error) {
+    console.error("Firebase 初始化失敗:", error);
+  }
 </script>
 </body>
 </html>
