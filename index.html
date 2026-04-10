@@ -172,6 +172,35 @@ table.dt tbody tr:last-child td{border-bottom:none;}
 .stats-row-tons{font-size:13px;font-weight:700;color:var(--accent2);text-align:right;white-space:nowrap;}
 .stats-total{display:grid;grid-template-columns:1fr auto auto;gap:10px;padding:11px 12px;background:#eff6ff;border:2px solid var(--accent);border-radius:8px;margin-top:4px;}
 .stats-col-hdr{font-size:11px;font-weight:700;color:var(--text-dim);text-align:right;letter-spacing:.5px;text-transform:uppercase;}
+
+/* SORT BAR */
+.sort-bar{display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap;}
+.sort-label{font-size:12px;color:var(--text-dim);font-weight:600;flex-shrink:0;}
+.sort-btn{padding:5px 11px;border-radius:20px;border:1.5px solid var(--border);background:#fff;font-size:12px;font-weight:600;color:var(--text-dim);cursor:pointer;transition:all .15s;white-space:nowrap;}
+.sort-btn.active{border-color:var(--accent);color:var(--accent);background:#eff6ff;}
+
+/* LOCKED CARD */
+.record-card.locked{border-color:#94a3b8 !important;opacity:.85;}
+.locked-badge{font-size:10px;font-weight:700;color:#166534;background:#dcfce7;border:1px solid #86efac;border-radius:4px;padding:2px 6px;white-space:nowrap;flex-shrink:0;}
+
+/* LONG-PRESS MENU */
+.ctx-menu{display:none;position:fixed;z-index:300;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.15);min-width:180px;overflow:hidden;}
+.ctx-menu.show{display:block;}
+.ctx-item{display:flex;align-items:center;gap:10px;padding:13px 16px;font-size:14px;font-weight:600;color:var(--text);cursor:pointer;transition:background .12s;}
+.ctx-item:active{background:var(--surface2);}
+.ctx-item.danger{color:var(--danger);}
+.ctx-item svg{width:16px;height:16px;flex-shrink:0;}
+.ctx-overlay{display:none;position:fixed;inset:0;z-index:299;}
+.ctx-overlay.show{display:block;}
+
+/* PRINT PREVIEW MODAL */
+.preview-mo{display:none;position:fixed;inset:0;background:rgba(15,23,42,.6);z-index:250;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto;}
+.preview-mo.open{display:flex;}
+.preview-box{background:#fff;border-radius:14px;max-width:600px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3);overflow:hidden;}
+.preview-topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid #e2e8f0;background:#f8fafc;}
+.preview-topbar span{font-size:14px;font-weight:700;color:#1e293b;}
+.preview-actions{display:flex;gap:8px;}
+.preview-content{padding:16px;overflow-x:auto;}
 /* ── PRINT STYLES ── */
 @media print{
   body *{visibility:hidden;}
@@ -213,7 +242,7 @@ table.dt tbody tr:last-child td{border-bottom:none;}
   </div>
 
   <div class="search-bar">
-    <input class="search-input" id="searchInp" placeholder="🔍 搜尋路段、派案名稱…" oninput="doSearch()" type="search">
+    <input class="search-input" id="searchInp" placeholder="🔍 搜尋路段、派案名稱…" oninput="doSearch()" type="text" autocomplete="off" autocorrect="off" autocapitalize="off">
   </div>
   <div class="filter-row" id="filterRow">
     <span class="filter-tag active" data-filter="all" onclick="setFilter('all',this)">全部</span>
@@ -221,6 +250,11 @@ table.dt tbody tr:last-child td{border-bottom:none;}
     <span class="filter-tag" data-filter="night" onclick="setFilter('night',this)">🌙 夜間</span>
   </div>
 
+  <div class="sort-bar">
+    <span class="sort-label">排序：</span>
+    <span class="sort-btn active" data-sort="date-desc" onclick="setSort('date-desc',this)">日期 新→舊</span>
+    <span class="sort-btn" data-sort="date-asc"  onclick="setSort('date-asc',this)">日期 舊→新</span>
+  </div>
   <div class="section-label">施工記錄</div>
   <div class="add-card" onclick="addRecord()">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:17px;height:17px"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
@@ -262,6 +296,38 @@ table.dt tbody tr:last-child td{border-bottom:none;}
   <div class="stats-grid" id="statsGrid"></div>
   <div class="md-actions"><button class="btn btn-ghost" onclick="closeStatsMo()">關閉</button></div>
 </div></div>
+
+<!-- Context Menu -->
+<div class="ctx-overlay" id="ctxOverlay" onclick="closeCtx()"></div>
+<div class="ctx-menu" id="ctxMenu">
+  <div class="ctx-item" onclick="ctxAction('copy')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>複製派案
+  </div>
+  <div class="ctx-item" onclick="ctxAction('lock')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" id="ctxLockIcon"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+    <span id="ctxLockLabel">標記完工</span>
+  </div>
+  <div class="ctx-item" onclick="ctxAction('preview')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>列印預覽
+  </div>
+  <div class="ctx-item danger" onclick="ctxAction('delete')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>刪除
+  </div>
+</div>
+
+<!-- Print Preview Modal -->
+<div class="preview-mo" id="previewMo">
+  <div class="preview-box">
+    <div class="preview-topbar">
+      <span>🖨️ 列印預覽</span>
+      <div class="preview-actions">
+        <button class="btn btn-print" onclick="doPrint()">列印</button>
+        <button class="btn btn-ghost" style="font-size:12px;padding:6px 12px" onclick="closePreview()">關閉</button>
+      </div>
+    </div>
+    <div class="preview-content" id="previewContent"></div>
+  </div>
+</div>
 
 <!-- Print Area -->
 <div id="print-area" style="display:none"></div>
@@ -521,19 +587,26 @@ function matOpts(sel){
 
 function renderCard(rec){
   const ta=recTot(rec,'area'), tt=recTot(rec,'tons'), tm=recTot(rec,'mill');
-  return `<div class="record-card" id="card-${rec.id}">
-  <div class="record-card-header" style="user-select:none">
+  const locked = rec.locked || false;
+  return `<div class="record-card${locked?' locked':''}" id="card-${rec.id}">
+  <div class="record-card-header" style="user-select:none"
+    data-id="${rec.id}"
+    onpointerdown="startLongPress(event,${rec.id})"
+    onpointerup="cancelLongPress()"
+    onpointerleave="cancelLongPress()"
+    oncontextmenu="event.preventDefault();openCtx(event,${rec.id})">
     <div class="record-meta" onclick="toggle(${rec.id})" style="cursor:pointer;flex:1;min-width:0">
       <span class="card-loc-badge" id="tloc-${rec.id}">${eh(rec.caseLocation||'板橋')}</span>
       <span class="card-case-badge" id="tcn-${rec.id}">${eh(buildCaseNumLabel(rec))}</span>
       <span class="tag accent" id="td-${rec.id}">${eh(rec.date||'--')}</span>
       <span class="tag"        id="tw-${rec.id}">${eh(rec.weekday||'')}</span>
       <span class="tag warn"   id="ts-${rec.id}">${eh(rec.shift||'--')}</span>
+      ${locked ? '<span class="locked-badge">✅ 已完工</span>' : ''}
     </div>
     <div class="record-actions">
-      <div class="icon-btn del" onclick="event.stopPropagation();askDel(${rec.id})">
+      ${!locked ? `<div class="icon-btn del" onclick="event.stopPropagation();askDel(${rec.id})">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:12px;height:12px"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6M10 11v6M14 11v6M9 6V4h6v2"/></svg>
-      </div>
+      </div>` : ''}
       <div class="icon-btn" onclick="toggle(${rec.id})">
         <svg id="ch-${rec.id}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:12px;height:12px;transition:transform .2s"><polyline points="6 9 12 15 18 9"/></svg>
       </div>
@@ -561,7 +634,7 @@ function renderCard(rec){
     </div>
     </div>
   </div>
-  <div class="record-body" id="bd-${rec.id}" onclick="event.stopPropagation()">
+  <div class="record-body" id="bd-${rec.id}" onclick="event.stopPropagation()" style="${locked?'pointer-events:none;opacity:.7':''}">
     <div class="info-grid">
       <div class="fg"><div class="fl">派案地點</div>
         <div class="sw">
@@ -630,8 +703,8 @@ function renderCard(rec){
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:13px;height:13px"><path d="M12 5v14M5 12h14"/></svg>新增路段
       </button>
     </div>
-    <button class="btn btn-print" style="align-self:flex-end;margin-top:2px" onclick="printRec(${rec.id})">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><path d="M6 14h12v8H6z"/></svg>列印
+    <button class="btn btn-print" style="align-self:flex-end;margin-top:2px" onclick="openPreview(${rec.id})">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>列印預覽
     </button>
   </div>
 </div>`;
@@ -847,7 +920,7 @@ let searchQ = '';
 let activeFilter = 'all';
 
 function doSearch() {
-  searchQ = document.getElementById('searchInp').value.trim().toLowerCase();
+  searchQ = document.getElementById('searchInp').value.replace(/\s+/g,' ').trim().toLowerCase();
   renderFiltered();
 }
 
@@ -866,17 +939,23 @@ function getFiltered() {
     // search
     if (!searchQ) return true;
     const hay = [
-      buildCaseNo(rec), rec.zone, rec.date, rec.material,
-      rec.caseLocation, rec.caseNum,
-      ...( rec.rows||[] ).map(r=>r.segment)
-    ].join(' ').toLowerCase();
-    return hay.includes(searchQ);
+      buildCaseNo(rec) || '',
+      rec.zone || '',
+      rec.date || '',
+      rec.material || '',
+      rec.caseLocation || '',
+      rec.caseNum || '',
+      buildCaseNumLabel(rec) || '',
+      ...( rec.rows||[] ).map(r=>r.segment||'')
+    ].join('　').replace(/\s+/g,' ').trim().toLowerCase();
+    // split searchQ into words, all must match
+    return searchQ.split(' ').filter(Boolean).every(w => hay.includes(w));
   });
 }
 
 function renderFiltered() {
   const rl = document.getElementById('rl');
-  const filtered = getFiltered();
+  const filtered = getSorted(getFiltered());
   if (!filtered.length) {
     rl.innerHTML = `<div style="text-align:center;padding:30px 14px;color:var(--text-dim);font-size:14px">
       <div style="font-size:28px;margin-bottom:8px">🔍</div>找不到符合的記錄</div>`;
@@ -952,6 +1031,203 @@ function updateStats(){
 }
 
 
+
+
+// ══════════════════════════════════════════
+//  SORT
+// ══════════════════════════════════════════
+let currentSort = 'date-desc';
+
+function setSort(s, el) {
+  currentSort = s;
+  document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  renderFiltered();
+}
+
+function getSorted(arr) {
+  return [...arr].sort((a, b) => {
+    if (currentSort === 'date-desc' || currentSort === 'date-asc') {
+      const da = parseDate(a.date), db = parseDate(b.date);
+      const ta = da ? da.getTime() : 0, tb = db ? db.getTime() : 0;
+      return currentSort === 'date-desc' ? tb - ta : ta - tb;
+    }
+    if (currentSort === 'area-desc' || currentSort === 'area-asc') {
+      const aa = recTot(a,'area'), ab = recTot(b,'area');
+      return currentSort === 'area-desc' ? ab - aa : aa - ab;
+    }
+    return 0;
+  });
+}
+
+// ══════════════════════════════════════════
+//  COPY RECORD
+// ══════════════════════════════════════════
+function copyRecord(id) {
+  const src = gr(id); if (!src) return;
+  const nid = Date.now();
+  const d = new Date();
+  const copy = JSON.parse(JSON.stringify(src));
+  copy.id   = nid;
+  copy.date = `${d.getFullYear()-1911}/${d.getMonth()+1}/${d.getDate()}`;
+  copy.weekday = WEEKDAYS[d.getDay()];
+  copy.locked = false;
+  copy.rows = copy.rows.map(r => ({ ...r, id: Date.now() + Math.random()*1000|0 }));
+  records.push(copy);
+  persistRecord(copy);
+  render();
+  setTimeout(() => {
+    toggle(nid);
+    const el = document.getElementById(`card-${nid}`);
+    if (el) el.scrollIntoView({ behavior:'smooth', block:'start' });
+  }, 80);
+  showToast('已複製派案 ✓', 'success');
+}
+
+// ══════════════════════════════════════════
+//  LOCK / UNLOCK
+// ══════════════════════════════════════════
+function toggleLock(id) {
+  const rec = gr(id); if (!rec) return;
+  rec.locked = !rec.locked;
+  persistRecord(rec);
+  render();
+  showToast(rec.locked ? '✅ 已標記為完工' : '🔓 已取消完工', 'success');
+}
+
+// ══════════════════════════════════════════
+//  LONG PRESS CONTEXT MENU
+// ══════════════════════════════════════════
+let _lpTimer = null;
+let _ctxId   = null;
+
+function startLongPress(e, id) {
+  cancelLongPress();
+  _lpTimer = setTimeout(() => {
+    openCtx(e, id);
+  }, 550);
+}
+function cancelLongPress() {
+  clearTimeout(_lpTimer);
+  _lpTimer = null;
+}
+
+function openCtx(e, id) {
+  cancelLongPress();
+  _ctxId = id;
+  const rec = gr(id);
+  const menu = document.getElementById('ctxMenu');
+  const overlay = document.getElementById('ctxOverlay');
+  // update lock label
+  const lockLabel = document.getElementById('ctxLockLabel');
+  if (lockLabel) lockLabel.textContent = rec && rec.locked ? '取消完工' : '標記完工';
+  // position
+  const x = e.clientX || (e.touches && e.touches[0].clientX) || window.innerWidth/2;
+  const y = e.clientY || (e.touches && e.touches[0].clientY) || window.innerHeight/2;
+  menu.style.left = Math.min(x, window.innerWidth - 200) + 'px';
+  menu.style.top  = Math.min(y, window.innerHeight - 180) + 'px';
+  menu.classList.add('show');
+  overlay.classList.add('show');
+  if (navigator.vibrate) navigator.vibrate(30);
+}
+function closeCtx() {
+  document.getElementById('ctxMenu').classList.remove('show');
+  document.getElementById('ctxOverlay').classList.remove('show');
+  _ctxId = null;
+}
+function ctxAction(action) {
+  const id = _ctxId;
+  closeCtx();
+  if (!id) return;
+  if (action === 'copy')    copyRecord(id);
+  if (action === 'lock')    toggleLock(id);
+  if (action === 'preview') openPreview(id);
+  if (action === 'delete')  askDel(id);
+}
+
+// ══════════════════════════════════════════
+//  PRINT PREVIEW
+// ══════════════════════════════════════════
+let _previewId = null;
+
+function openPreview(id) {
+  const rec = gr(id); if (!rec) return;
+  _previewId = id;
+  // Build the same HTML as printRec but inject into modal
+  const ta = recTot(rec,'area'), tt = recTot(rec,'tons'), tm = recTot(rec,'mill');
+  const rows = rec.rows;
+  const rowsHtml = rows.map((row,i)=>{
+    const a=+row.area||0, t=row.thickness||'';
+    const tons=a&&t?calcTons(a,t).toFixed(2):'—';
+    const mill=a&&t?calcMill(a,t).toFixed(2):'—';
+    return `<tr style="font-size:14px">
+      <td style="text-align:center;padding:8px 5px">${i+1}</td>
+      <td style="padding:8px 5px">${eh(row.segment||'')}</td>
+      <td style="text-align:center;padding:8px 5px">${a||'—'}</td>
+      <td style="text-align:center;padding:8px 5px">${t||'—'}</td>
+      <td style="text-align:center;padding:8px 5px">${tons}</td>
+      <td style="text-align:center;padding:8px 5px">${mill}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('previewContent').innerHTML = `
+  <div style="font-family:'Microsoft YaHei','PingFang TC',sans-serif;color:#1e293b;font-size:13px">
+    <div style="border-bottom:3px solid #1e3a6e;padding-bottom:10px;margin-bottom:14px">
+      <div style="font-size:20px;font-weight:900;color:#1e3a6e">${eh(buildCaseNo(rec))} 施工面積記錄</div>
+      <div style="font-size:15px;font-weight:700;color:#334155;margin-top:4px">${eh(rec.zone||'')}${rec.material?'　料別：'+eh(rec.material):''}</div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);border:1.5px solid #cbd5e1;border-radius:8px;overflow:hidden;margin-bottom:14px">
+      ${[['日期',rec.date],['星期',rec.weekday],['日/夜',rec.shift],['刨除',rec.milling],['鋪設',rec.paving],['料別',rec.material]].map(([l,v],i)=>`
+      <div style="padding:9px 12px;border-right:${i%3===2?'none':'1px solid #cbd5e1'};border-bottom:${i>=3?'none':'1px solid #cbd5e1'}">
+        <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:#94a3b8;margin-bottom:3px">${l}</div>
+        <div style="font-size:14px;font-weight:700">${eh(v||'—')}</div>
+      </div>`).join('')}
+    </div>
+    <div style="font-size:13px;font-weight:700;color:#d97706;background:#fffbeb;border-left:4px solid #d97706;padding:5px 9px;border-radius:4px;margin-bottom:8px">📊 施工路段明細</div>
+    <table style="width:100%;border-collapse:collapse">
+      <thead><tr style="background:#1e3a6e;color:#fff">
+        <th style="padding:9px 5px;font-size:12px;width:36px">順序</th>
+        <th style="padding:9px 5px;font-size:12px;text-align:left">施工路段</th>
+        <th style="padding:9px 5px;font-size:12px;width:68px">面積(m²)</th>
+        <th style="padding:9px 5px;font-size:12px;width:62px">厚度(cm)</th>
+        <th style="padding:9px 5px;font-size:12px;width:68px">噸數(T)</th>
+        <th style="padding:9px 5px;font-size:12px;width:72px">刨除(-0.5)</th>
+      </tr></thead>
+      <tbody>${rowsHtml}
+        <tr style="background:#eff6ff;font-weight:700;color:#1e40af;font-size:14px">
+          <td colspan="2" style="text-align:right;padding:9px 10px">合　計</td>
+          <td style="text-align:center;padding:9px 5px">${n(ta,1)}</td>
+          <td></td>
+          <td style="text-align:center;padding:9px 5px">${n(tt)}</td>
+          <td style="text-align:center;padding:9px 5px">${n(tm)}</td>
+        </tr>
+      </tbody>
+    </table>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px">
+      <div style="border:2px solid #1e3a6e;border-radius:8px;padding:12px;text-align:center;background:#f0f4ff">
+        <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:4px">總面積</div>
+        <div style="font-size:26px;font-weight:900;color:#1e3a6e">${n(ta,1)} <span style="font-size:13px;color:#94a3b8">m²</span></div>
+      </div>
+      <div style="border:2px solid #1e3a6e;border-radius:8px;padding:12px;text-align:center;background:#f0f4ff">
+        <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:4px">總噸數</div>
+        <div style="font-size:26px;font-weight:900;color:#1e3a6e">${n(tt)} <span style="font-size:13px;color:#94a3b8">T</span></div>
+      </div>
+    </div>
+  </div>`;
+  document.getElementById('previewMo').classList.add('open');
+}
+
+function closePreview() {
+  document.getElementById('previewMo').classList.remove('open');
+  _previewId = null;
+}
+
+function doPrint() {
+  if (_previewId !== null) {
+    closePreview();
+    setTimeout(() => printRec(_previewId), 100);
+  }
+}
 
 // ══════════════════════════════════════════
 //  PRINT
@@ -1116,6 +1392,9 @@ function showToast(msg,type=''){
 }
 
 // Modal click-outside
+document.getElementById('previewMo').addEventListener('click',function(e){
+  if(e.target===this)closePreview();
+});
 ['matMo','delMo','statsMo'].forEach(id=>{
   document.getElementById(id).addEventListener('click',function(e){
     if(e.target===this){if(this.id==='matMo')closeMatMo();else if(this.id==='delMo')closeDelMo();else closeStatsMo();}
