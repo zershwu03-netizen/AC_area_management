@@ -350,6 +350,17 @@ table.dt tbody tr:last-child td{border-bottom:none;}
   <div class="md-actions"><button class="btn btn-ghost" onclick="closeMatMo()">完成</button></div>
 </div></div>
 
+<!-- Location Modal -->
+<div class="mo" id="locMo"><div class="md">
+  <h3>📍 地點管理</h3>
+  <div class="mat-list" id="locList"></div>
+  <div class="add-mat">
+    <input id="locInp" placeholder="新地點名稱…" onkeydown="if(event.key==='Enter')addLoc()">
+    <button class="btn btn-success" onclick="addLoc()">新增</button>
+  </div>
+  <div class="md-actions"><button class="btn btn-ghost" onclick="closeLocMo()">完成</button></div>
+</div></div>
+
 <!-- Delete Modal -->
 <div class="mo" id="delMo"><div class="md" style="max-width:300px">
   <h3>⚠️ 確認刪除</h3>
@@ -726,7 +737,7 @@ function renderCard(rec){
           <select class="fs" id="cl-${rec.id}" onchange="uCaseField(${rec.id},'caseLocation',this.value)">
             ${locations.map(l=>`<option value="${ea(l)}"${(rec.caseLocation||'板橋')===l?' selected':''}>${eh(l)}</option>`).join('')}
             <option value="" disabled>──────</option>
-            <option value="__addloc__">＋ 新增地點…</option>
+            <option value="__addloc__">＋ 管理地點…</option>
           </select>
         </div>
       </div>
@@ -891,28 +902,11 @@ function uShift(id, val, btn) {
 function uCaseField(id, field, val) {
   // 地點選單：若選到「新增地點」則開啟輸入
   if (field === 'caseLocation' && val === '__addloc__') {
-    const newLoc = prompt('輸入新地點名稱：');
-    if (newLoc && newLoc.trim()) {
-      const loc = newLoc.trim();
-      if (!locations.includes(loc)) {
-        locations.push(loc);
-        saveLocal();
-      }
-      // 設定為新地點並重新渲染該卡片選單
-      const rec = gr(id); if (!rec) return;
-      rec.caseLocation = loc;
-      persistRecord(rec);
-      // 重新渲染整張卡片以更新選單
-      const cardEl = document.getElementById(`card-${id}`);
-      const wasOpen = document.getElementById(`bd-${id}`)?.classList.contains('open');
-      if (cardEl) { cardEl.outerHTML = renderCard(rec); }
-      if (wasOpen) toggle(id);
-    } else {
-      // 取消：還原選單
-      const rec = gr(id);
-      const sel = document.getElementById(`cl-${id}`);
-      if (sel && rec) sel.value = rec.caseLocation || locations[0] || '';
-    }
+    // restore select value then open modal
+    const rec0 = gr(id);
+    const sel0 = document.getElementById(`cl-${id}`);
+    if (sel0 && rec0) sel0.value = rec0.caseLocation || locations[0] || '';
+    openLocMo(id);
     return;
   }
   const rec = gr(id); if (!rec) return;
@@ -1042,6 +1036,41 @@ function addMat(){
   materials.push(v);persistMats();inp.value='';renderMatList();showToast(`已新增「${v}」`,'success');
 }
 function removeMat(i){const nm=materials.splice(i,1)[0];persistMats();renderMatList();showToast(`已刪除「${nm}」`);}
+
+// Location modal
+let _locCallerCardId = null;
+function openLocMo(cardId) {
+  _locCallerCardId = cardId || null;
+  renderLocList();
+  document.getElementById('locMo').classList.add('open');
+}
+function closeLocMo() {
+  document.getElementById('locMo').classList.remove('open');
+  // Re-render cards to update location selects
+  render();
+}
+function renderLocList() {
+  document.getElementById('locList').innerHTML = locations.length
+    ? locations.map((l,i) => `<div class="mat-item">
+        <span>${eh(l)}</span>
+        <button class="mat-del" onclick="removeLoc(${i})" ${locations.length<=1?'disabled style="opacity:.3"':''}>×</button>
+      </div>`).join('')
+    : `<div style="color:var(--text-dim);font-size:12px;padding:5px">尚無地點</div>`;
+}
+function addLoc() {
+  const inp = document.getElementById('locInp'), v = inp.value.trim();
+  if (!v) return;
+  if (locations.includes(v)) { showToast('地點已存在','error'); return; }
+  locations.push(v);
+  saveLocal(); inp.value = ''; renderLocList();
+  showToast(`已新增「${v}」`,'success');
+}
+function removeLoc(i) {
+  if (locations.length <= 1) { showToast('至少保留一個地點','error'); return; }
+  const nm = locations.splice(i, 1)[0];
+  saveLocal(); renderLocList();
+  showToast(`已刪除「${nm}」`);
+}
 
 
 
@@ -2083,9 +2112,9 @@ function showToast(msg,type=''){
 document.getElementById('previewMo').addEventListener('click',function(e){
   if(e.target===this)closePreview();
 });
-['matMo','delMo','statsMo'].forEach(id=>{
+['matMo','delMo','statsMo','locMo'].forEach(id=>{
   document.getElementById(id).addEventListener('click',function(e){
-    if(e.target===this){if(this.id==='matMo')closeMatMo();else if(this.id==='delMo')closeDelMo();else closeStatsMo();}
+    if(e.target===this){if(this.id==='matMo')closeMatMo();else if(this.id==='delMo')closeDelMo();else if(this.id==='locMo')closeLocMo();else closeStatsMo();}
   });
 });
 
