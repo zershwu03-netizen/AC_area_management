@@ -49,24 +49,24 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .record-card.active{border-color:var(--accent);box-shadow:0 0 0 3px rgba(37,99,235,.12),var(--shadow);}
 .record-card-header{display:flex;align-items:center;justify-content:space-between;padding:11px 13px;cursor:pointer;gap:7px;background:var(--surface);}
 .record-meta{display:flex;flex-wrap:wrap;gap:4px;align-items:center;flex:1;min-width:0;}
-.tag{font-size:14px;font-weight:600;padding:3px 8px;border-radius:20px;background:var(--surface2);color:var(--text-dim);border:1px solid var(--border);white-space:nowrap;}
+.tag{font-size:12px;font-weight:600;padding:3px 8px;border-radius:20px;background:var(--surface2);color:var(--text-dim);border:1px solid var(--border);white-space:nowrap;}
 .tag.accent{background:#eff6ff;color:#2563eb;border-color:#bfdbfe;}
 .tag.warn{background:#fffbeb;color:#d97706;border-color:#fde68a;}
 .record-title{font-size:12px;font-weight:700;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .record-actions{display:flex;gap:4px;flex-shrink:0;}
 /* shift toggle buttons */
 .shift-toggle{display:flex;gap:5px;}
-.shift-btn{flex:1;padding:9px 0;border-radius:7px;border:1.5px solid var(--border);background:var(--surface2);font-family:var(--font);font-size:15px;font-weight:600;color:var(--text-dim);cursor:pointer;text-align:center;transition:all .18s;}
+.shift-btn{flex:1;padding:8px 0;border-radius:7px;border:1.5px solid var(--border);background:var(--surface2);font-family:var(--font);font-size:14px;font-weight:600;color:var(--text-dim);cursor:pointer;text-align:center;transition:all .18s;}
 .shift-btn.active-day{background:#fffbeb;border-color:#f59e0b;color:#d97706;}
 .shift-btn.active-night{background:#eff6ff;border-color:#3b82f6;color:#2563eb;}
 /* location badge in header — distinct from case badge */
-.card-loc-badge{font-size:15px;font-weight:800;color:#fff;background:var(--accent);border-radius:5px;padding:2px 8px;white-space:nowrap;flex-shrink:0;letter-spacing:.5px;}
+.card-loc-badge{font-size:12px;font-weight:800;color:#fff;background:var(--accent);border-radius:5px;padding:2px 7px;white-space:nowrap;flex-shrink:0;letter-spacing:.5px;}
 .card-summary{display:flex;flex-direction:column;gap:6px;padding:8px 13px 10px;border-top:1px solid var(--border);background:var(--surface2);}
 .card-sum-item{display:flex;align-items:baseline;gap:3px;}
-.card-sum-label{font-size:14px;color:var(--text-dim);}
-.card-sum-val{font-size:18px;font-weight:700;color:var(--accent);}
-.card-sum-unit{font-size:14px;color:var(--text-dim);}
-.card-case-badge{font-size:15px;font-weight:700;color:var(--accent);background:#eff6ff;border:1px solid #bfdbfe;border-radius:5px;padding:2px 7px;white-space:nowrap;flex-shrink:0;}
+.card-sum-label{font-size:12px;color:var(--text-dim);}
+.card-sum-val{font-size:15px;font-weight:700;color:var(--accent);}
+.card-sum-unit{font-size:12px;color:var(--text-dim);}
+.card-case-badge{font-size:12px;font-weight:700;color:var(--accent);background:#eff6ff;border:1px solid #bfdbfe;border-radius:5px;padding:2px 6px;white-space:nowrap;flex-shrink:0;}
 .icon-btn{width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:7px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;color:var(--text-dim);transition:all .15s;}
 .icon-btn:active{background:var(--border);}
 .icon-btn.del:active{background:var(--danger);color:#fff;}
@@ -140,6 +140,9 @@ table.dt tbody tr:last-child td{border-bottom:none;}
 .fb-status.disconnected{background:#fef2f2;color:var(--danger);border:1px solid #fecaca;}
 
 /* TOAST */
+.to-top{position:fixed;bottom:24px;right:16px;width:44px;height:44px;border-radius:50%;background:var(--accent);color:#fff;border:none;cursor:pointer;display:none;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(37,99,235,.35);z-index:150;transition:all .2s;}
+.to-top.show{display:flex;}
+.to-top:active{background:#1d4ed8;transform:scale(.93);}
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--text);border-radius:9px;padding:10px 16px;font-size:13px;font-weight:600;color:#fff;z-index:999;transition:transform .28s cubic-bezier(.34,1.56,.64,1);white-space:nowrap;box-shadow:var(--shadow-md);}
 .toast.show{transform:translateX(-50%) translateY(0);}
 .toast.success{background:var(--success);}
@@ -150,6 +153,21 @@ table.dt tbody tr:last-child td{border-bottom:none;}
 .btn-print svg{width:14px;height:14px;}
 
 
+
+/* MONTH GROUP */
+.month-group{}
+.month-header{display:flex;align-items:center;justify-content:space-between;padding:8px 4px 6px;cursor:pointer;user-select:none;}
+.month-title{font-size:14px;font-weight:700;color:var(--text-dim);letter-spacing:.5px;}
+.month-count{font-size:12px;color:var(--text-dim);background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:2px 9px;}
+.month-chevron{font-size:12px;color:var(--text-dim);transition:transform .2s;display:inline-block;}
+.month-cards{display:flex;flex-direction:column;gap:7px;margin-bottom:12px;}
+.month-cards.collapsed{display:none;}
+
+/* JUMP PICKER */
+.jump-bar{display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap;}
+.jump-label{font-size:12px;color:var(--text-dim);font-weight:600;flex-shrink:0;}
+.jump-sel{background:#fff;border:1.5px solid var(--border);border-radius:8px;padding:6px 10px;font-family:var(--font);font-size:13px;color:var(--text);-webkit-appearance:none;appearance:none;cursor:pointer;flex-shrink:0;}
+.jump-sel:focus{outline:none;border-color:var(--accent);}
 /* SEARCH BAR */
 .search-bar{display:flex;gap:7px;margin-bottom:10px;align-items:center;}
 .search-input{flex:1;background:#fff;border:1.5px solid var(--border);border-radius:9px;padding:9px 12px;font-family:var(--font);font-size:14px;color:var(--text);box-shadow:var(--shadow);}
@@ -202,6 +220,31 @@ table.dt tbody tr:last-child td{border-bottom:none;}
 .preview-actions{display:flex;gap:8px;}
 .preview-content{padding:16px;overflow-x:auto;}
 
+
+/* AFTER-WORK TABLE */
+.tbl-label-after{font-size:15px;font-weight:700;color:#16a34a;margin-bottom:6px;padding:5px 9px;background:#f0fdf4;border-radius:5px;border-left:3px solid #16a34a;margin-top:12px;}
+.diff-box{margin-top:10px;border:1.5px solid #e2e8f0;border-radius:9px;overflow:hidden;}
+.diff-box-title{background:#1e3a6e;color:#fff;font-size:13px;font-weight:700;padding:7px 12px;letter-spacing:.5px;}
+.diff-row{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;padding:9px 12px;border-bottom:1px solid #f1f5f9;font-size:13px;align-items:center;}
+.diff-row:last-child{border-bottom:none;}
+.diff-row.header{background:#f8fafc;font-weight:700;font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;}
+.diff-val{font-weight:700;text-align:right;}
+.diff-pos{color:#16a34a;}
+.diff-neg{color:#dc2626;}
+.diff-zero{color:var(--text-dim);}
+/* card summary after row */
+.cs-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;width:100%;}
+.cs-cell{border-radius:7px;padding:7px 9px;}
+.cs-cell.before{background:#eff6ff;}
+.cs-cell.after{background:#f0fdf4;}
+.cs-cell-label{font-size:10px;font-weight:700;margin-bottom:2px;}
+.cs-cell.before .cs-cell-label{color:#1d4ed8;}
+.cs-cell.after .cs-cell-label{color:#16a34a;}
+.cs-cell-val{font-size:15px;font-weight:700;color:#1e293b;}
+.cs-cell.after .cs-cell-val{color:#16a34a;}
+.cs-cell-unit{font-size:11px;color:#64748b;}
+.cs-after-row{margin-top:4px;}
+.cs-after-label{font-size:11px;font-weight:700;color:#16a34a;background:#f0fdf4;border:1px solid #86efac;border-radius:4px;padding:1px 6px;white-space:nowrap;}
 /* BATCH PRINT MODE */
 .batch-bar{display:none;background:#1e3a6e;padding:10px 14px;border-radius:10px;margin-bottom:10px;align-items:center;justify-content:space-between;gap:10px;}
 .batch-bar.show{display:flex;}
@@ -257,6 +300,12 @@ table.dt tbody tr:last-child td{border-bottom:none;}
     ⚠️ 目前離線中，資料已暫存於本機，連線後自動同步
   </div>
 
+  <div class="jump-bar">
+    <span class="jump-label">快速跳轉：</span>
+    <select class="jump-sel" id="jumpSel" onchange="jumpToMonth(this.value)">
+      <option value="">選擇月份…</option>
+    </select>
+  </div>
   <div class="search-bar">
     <input class="search-input" id="searchInp" placeholder="🔍 搜尋路段、派案名稱…" oninput="doSearch()" type="text" autocomplete="off" autocorrect="off" autocapitalize="off">
   </div>
@@ -359,6 +408,7 @@ table.dt tbody tr:last-child td{border-bottom:none;}
 <!-- Print Area -->
 <div id="print-area" style="display:none"></div>
 
+<button class="to-top" id="toTop" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="回到頂部"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:20px;height:20px"><polyline points="18 15 12 9 6 15"/></svg></button>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -652,25 +702,22 @@ function renderCard(rec){
       ${rec.paving  ? `<span style="font-size:13px;font-weight:600;color:var(--text-dim)">鋪設</span><span style="font-size:14px;font-weight:700;color:var(--text)">${eh(rec.paving)}</span>` : ''}
       ` : '<span style="font-size:13px;color:var(--text-dim)">未填時間</span>'}
     </div>
-    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-    <div class="card-sum-item">
-      <span class="card-sum-label">面積</span>
-      <span class="card-sum-val" id="cs-a-${rec.id}">${n(ta,1)}</span>
-      <span class="card-sum-unit">m²</span>
+    <div class="cs-grid" id="csg-${rec.id}">
+      <div class="cs-cell before"><div class="cs-cell-label">面積（前）</div><span class="cs-cell-val" id="cs-a-${rec.id}">${n(ta,1)}</span><span class="cs-cell-unit"> m²</span></div>
+      <div class="cs-cell before"><div class="cs-cell-label">噸數（前）</div><span class="cs-cell-val" id="cs-t-${rec.id}">${n(tt)}</span><span class="cs-cell-unit"> T</span></div>
+      <div class="cs-cell before"><div class="cs-cell-label">刨除（前）</div><span class="cs-cell-val" id="cs-m-${rec.id}">${n(tm)}</span><span class="cs-cell-unit"> T</span></div>
     </div>
-    <div style="width:1px;height:14px;background:var(--border);flex-shrink:0"></div>
-    <div class="card-sum-item">
-      <span class="card-sum-label">噸數</span>
-      <span class="card-sum-val" id="cs-t-${rec.id}">${n(tt)}</span>
-      <span class="card-sum-unit">T</span>
-    </div>
-    <div style="width:1px;height:14px;background:var(--border);flex-shrink:0"></div>
-    <div class="card-sum-item">
-      <span class="card-sum-label">刨除</span>
-      <span class="card-sum-val" id="cs-m-${rec.id}">${n(tm)}</span>
-      <span class="card-sum-unit">T</span>
-    </div>
-    </div>
+    ${(rec.afterRows&&rec.afterRows.length) ? `
+    <div class="cs-after-row" id="csa-${rec.id}">
+      <div class="cs-grid" style="margin-top:6px">
+        <div class="cs-cell after"><div class="cs-cell-label">面積（後）</div><span class="cs-cell-val" id="cs-aa-${rec.id}">${n(recAfterTot(rec,'area'),1)}</span><span class="cs-cell-unit"> m²</span></div>
+        <div class="cs-cell after"><div class="cs-cell-label">噸數（後）</div><span class="cs-cell-val" id="cs-at-${rec.id}">${n(recAfterTot(rec,'tons'))}</span><span class="cs-cell-unit"> T</span></div>
+        <div class="cs-cell" style="background:#f8fafc;border:1px solid #e2e8f0">
+          <div class="cs-cell-label" style="color:#64748b">差異</div>
+          <div style="font-size:15px;font-weight:700;white-space:nowrap">${(()=>{const d=+(recAfterTot(rec,'area')-ta).toFixed(1);const col=d>0?'#16a34a':d<0?'#dc2626':'#64748b';return '<span style="color:'+col+'">'+(d===0?'—':(d>0?'+':'')+d)+'</span><span style="font-size:12px;color:#64748b"> m²</span>';})()} <span style="color:#cbd5e1;font-size:12px">·</span> ${(()=>{const d=+(recAfterTot(rec,'tons')-tt).toFixed(2);const col=d>0?'#16a34a':d<0?'#dc2626':'#64748b';return '<span style="color:'+col+'">'+(d===0?'—':(d>0?'+':'')+d)+'</span><span style="font-size:12px;color:#64748b"> T</span>';})()}</div>
+        </div>
+      </div>
+    </div>` : ''}
   </div>
   <div class="record-body" id="bd-${rec.id}" onclick="event.stopPropagation()" style="${locked?'pointer-events:none;opacity:.7':''}">
     <div class="info-grid">
@@ -742,6 +789,52 @@ function renderCard(rec){
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:13px;height:13px"><path d="M12 5v14M5 12h14"/></svg>新增路段
       </button>
     </div>
+    <!-- 施工後表格 -->
+    <div class="tbl-section">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;margin-top:12px">
+        <div class="tbl-label-after" style="margin:0;flex:1">✅ 施工後明細</div>
+        <button class="btn btn-ghost btn-sm" style="font-size:12px;padding:5px 10px;margin-left:8px;border-color:#86efac;color:#16a34a;flex-shrink:0" onclick="copyBeforeToAfter(${rec.id})">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:13px;height:13px"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>複製施工前
+        </button>
+      </div>
+      <div class="tbl-wrap"><table class="dt">
+        <thead><tr>
+          <th style="width:30px">順序</th><th>施工路段</th>
+          <th style="width:62px">面積(m²)</th><th style="width:60px">厚度(cm)</th>
+          <th style="width:64px">噸數(T)</th>
+          <th style="width:26px"></th>
+        </tr></thead>
+        <tbody id="atb-${rec.id}">${(rec.afterRows||[]).map((r,i)=>renderAfterRow(rec,r,i)).join('')}</tbody>
+        <tfoot>
+          <tr class="total-row" style="background:#f0fdf4 !important">
+            <td colspan="2" style="text-align:right;padding-right:6px;font-size:10px;color:#16a34a">小計</td>
+            <td id="ata-${rec.id}" style="color:#16a34a">${n(recAfterTot(rec,'area'),1)}</td>
+            <td style="font-size:10px;color:#16a34a">總噸數(T)</td>
+            <td id="att-${rec.id}" style="color:#16a34a">${n(recAfterTot(rec,'tons'))}</td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table></div>
+      <button class="add-row-btn" style="border-color:#86efac;color:#16a34a" onclick="addAfterRow(${rec.id})">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:13px;height:13px"><path d="M12 5v14M5 12h14"/></svg>新增施工後路段
+      </button>
+    </div>
+
+    <!-- 差異對比 -->
+    ${(rec.afterRows&&rec.afterRows.length) ? `
+    <div class="diff-box" id="diff-${rec.id}">
+      <div class="diff-box-title">📊 施工前後差異</div>
+      <div class="diff-row header"><span>項目</span><span style="text-align:right">施工前</span><span style="text-align:right">施工後</span><span style="text-align:right">差異</span></div>
+      ${(()=>{
+        const ba=recAfterTot(rec,'area'), bt=recAfterTot(rec,'tons');
+        const da=ba-ta, dt=bt-tt;
+        const fmtDiff=(v,dec=1)=>v===0?'—':(v>0?'+':'')+v.toFixed(dec);
+        const cls=(v)=>v>0?'diff-pos':v<0?'diff-neg':'diff-zero';
+        return `<div class="diff-row"><span>面積 (m²)</span><span class="diff-val">${n(ta,1)}</span><span class="diff-val" style="color:#16a34a">${n(ba,1)}</span><span class="diff-val ${cls(da)}">${fmtDiff(da,1)}</span></div>
+        <div class="diff-row"><span>噸數 (T)</span><span class="diff-val">${n(tt)}</span><span class="diff-val" style="color:#16a34a">${n(bt)}</span><span class="diff-val ${cls(dt)}">${fmtDiff(dt)}</span></div>`;
+      })()}
+    </div>` : ''}
+
     <button class="btn btn-print" style="align-self:flex-end;margin-top:2px" onclick="openPreview(${rec.id})">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>列印預覽
     </button>
@@ -992,15 +1085,85 @@ function getFiltered() {
   });
 }
 
+function getMonthKey(rec) {
+  const d = parseDate(rec.date);
+  if (!d || isNaN(d)) return '未知日期';
+  const y = d.getFullYear() - 1911;
+  const m = d.getMonth() + 1;
+  return `${y}年${m}月`;
+}
+
 function renderFiltered() {
   const rl = document.getElementById('rl');
   const filtered = getSorted(getFiltered());
   if (!filtered.length) {
     rl.innerHTML = `<div style="text-align:center;padding:30px 14px;color:var(--text-dim);font-size:14px">
       <div style="font-size:28px;margin-bottom:8px">🔍</div>找不到符合的記錄</div>`;
+    updateJumpPicker([]);
     return;
   }
-  rl.innerHTML = filtered.map(r => renderCard(r)).join('');
+
+  // Group by month
+  const groups = {};
+  const order = [];
+  filtered.forEach(rec => {
+    const key = getMonthKey(rec);
+    if (!groups[key]) { groups[key] = []; order.push(key); }
+    groups[key].push(rec);
+  });
+
+  // Render
+  rl.innerHTML = order.map(key => {
+    const recs = groups[key];
+    const id = 'mg-' + key.replace(/[^0-9a-z]/gi,'');
+    return `<div class="month-group" id="${id}">
+      <div class="month-header" onclick="toggleMonth('${id}')">
+        <span class="month-title">📅 ${key}</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="month-count">${recs.length} 筆</span>
+          <span class="month-chevron" id="chev-${id}">▾</span>
+        </div>
+      </div>
+      <div class="month-cards" id="cards-${id}">
+        ${recs.map(r => renderCard(r)).join('')}
+      </div>
+    </div>`;
+  }).join('');
+
+  updateJumpPicker(order);
+}
+
+function toggleMonth(id) {
+  const cards = document.getElementById('cards-' + id);
+  const chev  = document.getElementById('chev-' + id);
+  if (!cards) return;
+  const collapsed = cards.classList.toggle('collapsed');
+  if (chev) chev.style.transform = collapsed ? 'rotate(-90deg)' : '';
+}
+
+function updateJumpPicker(months) {
+  const sel = document.getElementById('jumpSel');
+  if (!sel) return;
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">選擇月份…</option>' +
+    months.map(m => `<option value="${m}"${m===cur?' selected':''}>${m}</option>`).join('');
+}
+
+function jumpToMonth(key) {
+  if (!key) return;
+  const id = 'mg-' + key.replace(/[^0-9a-z]/gi,'');
+  const el = document.getElementById(id);
+  if (!el) return;
+  // Make sure the month is expanded
+  const cards = document.getElementById('cards-' + id);
+  const chev  = document.getElementById('chev-' + id);
+  if (cards && cards.classList.contains('collapsed')) {
+    cards.classList.remove('collapsed');
+    if (chev) chev.style.transform = '';
+  }
+  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  // Reset select so user can jump to same month again
+  setTimeout(() => { document.getElementById('jumpSel').value = ''; }, 800);
 }
 
 // ══════════════════════════════════════════
@@ -1192,7 +1355,7 @@ let _previewId = null;
 function openPreview(id) {
   const rec = gr(id); if (!rec) return;
   _previewId = id;
-  // Build the same HTML as printRec but inject into modal
+  // Build preview using same HTML as printRec (without the style tag, add to modal)
   const ta = recTot(rec,'area'), tt = recTot(rec,'tons'), tm = recTot(rec,'mill');
   const rows = rec.rows;
   const rowsHtml = rows.map((row,i)=>{
@@ -1200,58 +1363,116 @@ function openPreview(id) {
     const tons=a&&t?calcTons(a,t).toFixed(2):'—';
     const mill=a&&t?calcMill(a,t).toFixed(2):'—';
     return `<tr style="font-size:14px">
-      <td style="text-align:center;padding:8px 5px">${i+1}</td>
-      <td style="padding:8px 5px">${eh(row.segment||'')}</td>
-      <td style="text-align:center;padding:8px 5px">${a||'—'}</td>
-      <td style="text-align:center;padding:8px 5px">${t||'—'}</td>
-      <td style="text-align:center;padding:8px 5px">${tons}</td>
-      <td style="text-align:center;padding:8px 5px">${mill}</td>
+      <td style="text-align:center;padding:7px 5px">${i+1}</td>
+      <td style="padding:7px 5px">${eh(row.segment||'')}</td>
+      <td style="text-align:center;padding:7px 5px">${a||'—'}</td>
+      <td style="text-align:center;padding:7px 5px">${t||'—'}</td>
+      <td style="text-align:center;padding:7px 5px">${tons}</td>
+      <td style="text-align:center;padding:7px 5px">${mill}</td>
     </tr>`;
   }).join('');
 
+  // Build after rows HTML if exists
+  const afterHtml = (rec.afterRows&&rec.afterRows.length) ? `
+    <div style="margin-top:16px">
+      <div style="font-size:15px;font-weight:700;color:#16a34a;background:#f0fdf4;border-left:4px solid #16a34a;padding:5px 10px;border-radius:4px;margin-bottom:7px">✅ 施工後明細</div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr style="background:#166534;color:#fff">
+          <th style="padding:8px 5px;width:36px">順序</th><th style="text-align:left;padding:8px 5px">施工路段</th>
+          <th style="padding:8px 5px;width:68px">面積(m²)</th><th style="padding:8px 5px;width:62px">厚度(cm)</th>
+          <th style="padding:8px 5px;width:68px">噸數(T)</th>
+        </tr></thead>
+        <tbody>
+          ${(rec.afterRows||[]).map((row,i)=>{
+            const a=+row.area||0,t=row.thickness||'';
+            const tons=a&&t?calcTons(a,t).toFixed(2):'—';
+            return `<tr style="font-size:13px;background:${i%2===0?'#fff':'#f8fafc'}">
+              <td style="text-align:center;padding:7px 5px">${i+1}</td>
+              <td style="padding:7px 5px">${eh(row.segment||'')}</td>
+              <td style="text-align:center;padding:7px 5px">${a||'—'}</td>
+              <td style="text-align:center;padding:7px 5px">${t||'—'}</td>
+              <td style="text-align:center;padding:7px 5px">${tons}</td>
+            </tr>`;
+          }).join('')}
+          <tr style="background:#f0fdf4;font-weight:700;color:#166534">
+            <td colspan="2" style="text-align:right;padding:8px 10px">合計</td>
+            <td style="text-align:center;padding:8px 5px">${n(recAfterTot(rec,'area'),1)}</td>
+            <td></td>
+            <td style="text-align:center;padding:8px 5px">${n(recAfterTot(rec,'tons'))}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="margin-top:12px;border:1.5px solid #1e3a6e;border-radius:8px;overflow:hidden">
+      <div style="background:#1e3a6e;color:#fff;font-size:14px;font-weight:700;padding:7px 12px">📊 施工前後差異</div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr style="background:#f1f5f9">
+          <th style="text-align:left;padding:8px 10px">項目</th>
+          <th style="text-align:center;padding:8px 6px">施工前</th>
+          <th style="text-align:center;padding:8px 6px">施工後</th>
+          <th style="text-align:center;padding:8px 6px">差異</th>
+        </tr></thead>
+        <tbody>${(()=>{
+          const ba=recAfterTot(rec,'area'),bt=recAfterTot(rec,'tons');
+          const da=+(ba-ta).toFixed(1),dt=+(bt-tt).toFixed(2);
+          const fmt=(v,d)=>v===0?'—':(v>0?'+':'')+v.toFixed(d);
+          const col=(v)=>v>0?'#16a34a':v<0?'#dc2626':'#64748b';
+          return `<tr><td style="padding:8px 10px;font-weight:600">面積 (m²)</td>
+            <td style="text-align:center;font-weight:700">${n(ta,1)}</td>
+            <td style="text-align:center;font-weight:700;color:#16a34a">${n(ba,1)}</td>
+            <td style="text-align:center;font-weight:800;color:${col(da)}">${fmt(da,1)}</td></tr>
+          <tr style="background:#f8fafc"><td style="padding:8px 10px;font-weight:600">噸數 (T)</td>
+            <td style="text-align:center;font-weight:700">${n(tt)}</td>
+            <td style="text-align:center;font-weight:700;color:#16a34a">${n(bt)}</td>
+            <td style="text-align:center;font-weight:800;color:${col(dt)}">${fmt(dt,2)}</td></tr>`;
+        })()}</tbody>
+      </table>
+    </div>` : '';
+
   document.getElementById('previewContent').innerHTML = `
   <div style="font-family:'Microsoft YaHei','PingFang TC',sans-serif;color:#1e293b;font-size:13px">
-    <div style="border-bottom:3px solid #1e3a6e;padding-bottom:10px;margin-bottom:14px">
-      <div style="font-size:20px;font-weight:900;color:#1e3a6e">${eh(buildCaseNo(rec))} 施工面積記錄</div>
-      <div style="font-size:15px;font-weight:700;color:#334155;margin-top:4px">${eh(rec.zone||'')}${rec.material?'　料別：'+eh(rec.material):''}</div>
+    <div style="border-bottom:3px solid #1e3a6e;padding-bottom:10px;margin-bottom:12px">
+      <div style="font-size:18px;font-weight:900;color:#1e3a6e">${eh(buildCaseNo(rec))} 施工面積記錄</div>
+      <div style="font-size:14px;font-weight:700;color:#334155;margin-top:3px">${eh(rec.zone||'')}${rec.material?'　料別：'+eh(rec.material):''}</div>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);border:1.5px solid #cbd5e1;border-radius:8px;overflow:hidden;margin-bottom:14px">
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);border:1.5px solid #cbd5e1;border-radius:8px;overflow:hidden;margin-bottom:12px">
       ${[['日期',rec.date],['星期',rec.weekday],['日/夜',rec.shift],['前置',rec.prepare],['刨除',rec.milling],['鋪設',rec.paving]].map(([l,v],i)=>`
-      <div style="padding:9px 12px;border-right:${i%3===2?'none':'1px solid #cbd5e1'};border-bottom:${i>=3?'none':'1px solid #cbd5e1'}">
-        <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:#94a3b8;margin-bottom:3px">${l}</div>
-        <div style="font-size:14px;font-weight:700">${eh(v||'—')}</div>
+      <div style="padding:8px 11px;border-right:${i%3===2?'none':'1px solid #cbd5e1'};border-bottom:${i>=3?'none':'1px solid #cbd5e1'}">
+        <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:#94a3b8;margin-bottom:2px">${l}</div>
+        <div style="font-size:13px;font-weight:700">${eh(v||'—')}</div>
       </div>`).join('')}
     </div>
-    <div style="font-size:13px;font-weight:700;color:#d97706;background:#fffbeb;border-left:4px solid #d97706;padding:5px 9px;border-radius:4px;margin-bottom:8px">📊 施工路段明細</div>
+    <div style="font-size:13px;font-weight:700;color:#d97706;background:#fffbeb;border-left:4px solid #d97706;padding:5px 9px;border-radius:4px;margin-bottom:7px">📊 施工前明細</div>
     <table style="width:100%;border-collapse:collapse">
       <thead><tr style="background:#1e3a6e;color:#fff">
-        <th style="padding:9px 5px;font-size:12px;width:36px">順序</th>
-        <th style="padding:9px 5px;font-size:12px;text-align:left">施工路段</th>
-        <th style="padding:9px 5px;font-size:12px;width:68px">面積(m²)</th>
-        <th style="padding:9px 5px;font-size:12px;width:62px">厚度(cm)</th>
-        <th style="padding:9px 5px;font-size:12px;width:68px">噸數(T)</th>
-        <th style="padding:9px 5px;font-size:12px;width:72px">刨除(-0.5)</th>
+        <th style="padding:8px 5px;font-size:11px;width:36px">順序</th>
+        <th style="padding:8px 5px;font-size:11px;text-align:left">施工路段</th>
+        <th style="padding:8px 5px;font-size:11px;width:64px">面積(m²)</th>
+        <th style="padding:8px 5px;font-size:11px;width:58px">厚度(cm)</th>
+        <th style="padding:8px 5px;font-size:11px;width:64px">噸數(T)</th>
+        <th style="padding:8px 5px;font-size:11px;width:68px">刨除(-0.5)</th>
       </tr></thead>
       <tbody>${rowsHtml}
-        <tr style="background:#eff6ff;font-weight:700;color:#1e40af;font-size:14px">
-          <td colspan="2" style="text-align:right;padding:9px 10px">合　計</td>
-          <td style="text-align:center;padding:9px 5px">${n(ta,1)}</td>
+        <tr style="background:#eff6ff;font-weight:700;color:#1e40af;font-size:13px">
+          <td colspan="2" style="text-align:right;padding:8px 9px">合　計</td>
+          <td style="text-align:center;padding:8px 5px">${n(ta,1)}</td>
           <td></td>
-          <td style="text-align:center;padding:9px 5px">${n(tt)}</td>
-          <td style="text-align:center;padding:9px 5px">${n(tm)}</td>
+          <td style="text-align:center;padding:8px 5px">${n(tt)}</td>
+          <td style="text-align:center;padding:8px 5px">${n(tm)}</td>
         </tr>
       </tbody>
     </table>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px">
-      <div style="border:2px solid #1e3a6e;border-radius:8px;padding:12px;text-align:center;background:#f0f4ff">
-        <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:4px">總面積</div>
-        <div style="font-size:26px;font-weight:900;color:#1e3a6e">${n(ta,1)} <span style="font-size:13px;color:#94a3b8">m²</span></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px">
+      <div style="border:2px solid #1e3a6e;border-radius:7px;padding:10px;text-align:center;background:#f0f4ff">
+        <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:3px">總面積</div>
+        <div style="font-size:22px;font-weight:900;color:#1e3a6e">${n(ta,1)}<span style="font-size:12px;color:#94a3b8"> m²</span></div>
       </div>
-      <div style="border:2px solid #1e3a6e;border-radius:8px;padding:12px;text-align:center;background:#f0f4ff">
-        <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:4px">總噸數</div>
-        <div style="font-size:26px;font-weight:900;color:#1e3a6e">${n(tt)} <span style="font-size:13px;color:#94a3b8">T</span></div>
+      <div style="border:2px solid #1e3a6e;border-radius:7px;padding:10px;text-align:center;background:#f0f4ff">
+        <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:3px">總噸數</div>
+        <div style="font-size:22px;font-weight:900;color:#1e3a6e">${n(tt)}<span style="font-size:12px;color:#94a3b8"> T</span></div>
       </div>
     </div>
+    ${afterHtml}
   </div>`;
   document.getElementById('previewMo').classList.add('open');
 }
@@ -1402,6 +1623,45 @@ function printRec(id) {
         <div><span class="p-sum-val">${n(tt)}</span><span class="p-sum-unit">T</span></div>
       </div>
     </div>
+
+    ${(rec.afterRows&&rec.afterRows.length) ? `
+    <div style="margin-top:20px">
+      <div style="font-size:18px;font-weight:700;color:#16a34a;background:#f0fdf4;border-left:4px solid #16a34a;padding:6px 11px;border-radius:4px;margin-bottom:9px">✅ 施工後明細</div>
+      <table>
+        <thead><tr style="background:#166534">
+          <th style="width:44px">順序</th><th>施工路段</th>
+          <th style="width:76px">面積(m²)</th><th style="width:70px">厚度(cm)</th>
+          <th style="width:76px">噸數(T)</th>
+        </tr></thead>
+        <tbody>
+          ${(rec.afterRows||[]).map((row,i)=>{
+            const a=+row.area||0,t=row.thickness||'';
+            const tons=a&&t?calcTons(a,t).toFixed(2):'—';
+            return '<tr style="font-size:16px"><td style="text-align:center">'+(i+1)+'</td><td>'+eh(row.segment||'')+'</td><td style="text-align:center">'+(a||'—')+'</td><td style="text-align:center">'+(t||'—')+'</td><td style="text-align:center">'+tons+'</td></tr>';
+          }).join('')}
+          <tr style="background:#f0fdf4;font-weight:700;color:#166534;font-size:16px">
+            <td colspan="2" style="text-align:right;padding-right:12px">合　計</td>
+            <td style="text-align:center">${n(recAfterTot(rec,'area'),1)}</td>
+            <td></td>
+            <td style="text-align:center">${n(recAfterTot(rec,'tons'))}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="margin-top:16px;border:2px solid #1e3a6e;border-radius:9px;overflow:hidden">
+      <div style="background:#1e3a6e;color:#fff;font-size:16px;font-weight:700;padding:8px 14px">📊 施工前後差異</div>
+      <table style="font-size:16px">
+        <thead><tr style="background:#f1f5f9"><th style="text-align:left;padding:9px 12px">項目</th><th>施工前</th><th>施工後</th><th>差異</th></tr></thead>
+        <tbody>${(()=>{
+          const ba=recAfterTot(rec,'area'),bt=recAfterTot(rec,'tons');
+          const da=+(ba-ta).toFixed(1),dt=+(bt-tt).toFixed(2);
+          const fmt=(v,d)=>v===0?'—':(v>0?'+':'')+v.toFixed(d);
+          const col=(v)=>v>0?'#16a34a':v<0?'#dc2626':'#64748b';
+          return '<tr><td style="padding:9px 12px;font-weight:600">面積 (m²)</td><td style="text-align:center;font-weight:700">'+n(ta,1)+'</td><td style="text-align:center;font-weight:700;color:#16a34a">'+n(ba,1)+'</td><td style="text-align:center;font-weight:800;color:'+col(da)+'">'+fmt(da,1)+'</td></tr><tr style="background:#f8fafc"><td style="padding:9px 12px;font-weight:600">噸數 (T)</td><td style="text-align:center;font-weight:700">'+n(tt,2)+'</td><td style="text-align:center;font-weight:700;color:#16a34a">'+n(bt,2)+'</td><td style="text-align:center;font-weight:800;color:'+col(dt)+'">'+fmt(dt,2)+'</td></tr>';
+        })()}</tbody>
+      </table>
+    </div>
+    ` : ''}
 
     <div class="p-footer">
       <span>列印時間：${new Date().toLocaleString('zh-TW')}</span>
@@ -1584,6 +1844,198 @@ function doBatchPrint() {
   showToast(`已列印 ${selectedRecs.length} 筆記錄 🖨️`, 'success');
 }
 
+
+// ══════════════════════════════════════════
+//  AFTER-WORK ROWS
+// ══════════════════════════════════════════
+function recAfterTot(rec, what) {
+  if (!rec.afterRows || !rec.afterRows.length) return 0;
+  return rec.afterRows.reduce((s, r) => {
+    const a = +r.area||0, t = r.thickness||'0';
+    if (what==='area') return s+a;
+    if (what==='tons') return s+calcTons(a,t);
+    return s;
+  }, 0);
+}
+
+function renderAfterRow(rec, row, idx) {
+  const a = +row.area||0, t = row.thickness||'';
+  const tons = a&&t ? calcTons(a,t).toFixed(2) : '';
+  return `<tr id="atr-${rec.id}-${row.id}">
+    <td><div class="cr" style="color:#16a34a">${idx+1}</div></td>
+    <td><input class="ci seg" value="${ea(row.segment||'')}" oninput="uAfterRF(${rec.id},${row.id},'segment',this.value)" placeholder="路段名稱"></td>
+    <td><input class="ci" type="number" step="0.1" value="${a||''}" oninput="uAfterArea(${rec.id},${row.id},this)" placeholder="0"></td>
+    <td><input class="ci" type="number" step="0.5" value="${ea(t)}" oninput="uAfterThick(${rec.id},${row.id},this.value)" placeholder="cm"></td>
+    <td><div class="cr" style="color:#16a34a" id="atons-${rec.id}-${row.id}">${tons}</div></td>
+    <td><button class="del-row-btn" onclick="delAfterRow(${rec.id},${row.id})">×</button></td>
+  </tr>`;
+}
+
+function addAfterRow(recId) {
+  const rec = gr(recId); if (!rec) return;
+  if (!rec.afterRows) rec.afterRows = [];
+  const nid = Date.now();
+  // default thickness from first before-row
+  const defaultThick = rec.rows[0]?.thickness || '';
+  rec.afterRows.push({ id:nid, segment:'', area:0, thickness:defaultThick });
+  const tbody = document.getElementById(`atb-${recId}`);
+  if (tbody) {
+    const tr = document.createElement('tr');
+    tr.id = `atr-${recId}-${nid}`;
+    tr.innerHTML = renderAfterRow(rec, rec.afterRows[rec.afterRows.length-1], rec.afterRows.length-1)
+      .replace(/^<tr[^>]*>|<\/tr>$/g,'');
+    tbody.appendChild(tr);
+    reindexAfter(recId);
+  }
+  updAfterTots(recId);
+  persistRecord(rec);
+}
+
+function delAfterRow(recId, rowId) {
+  const rec = gr(recId); if (!rec) return;
+  rec.afterRows = (rec.afterRows||[]).filter(r => r.id !== rowId);
+  const el = document.getElementById(`atr-${recId}-${rowId}`);
+  if (el) el.remove();
+  reindexAfter(recId);
+  updAfterTots(recId);
+  persistRecord(rec);
+}
+
+function reindexAfter(recId) {
+  const tbody = document.getElementById(`atb-${recId}`); if (!tbody) return;
+  tbody.querySelectorAll('tr').forEach((tr,i) => {
+    const c = tr.querySelector('td:first-child .cr'); if (c) c.textContent = i+1;
+  });
+}
+
+function uAfterRF(recId, rowId, field, val) {
+  const rec=gr(recId); if(!rec) return;
+  const row=(rec.afterRows||[]).find(r=>r.id===rowId); if(!row) return;
+  row[field]=val; persistRecord(rec);
+}
+
+function uAfterArea(recId, rowId, input) {
+  const rec=gr(recId); if(!rec) return;
+  const row=(rec.afterRows||[]).find(r=>r.id===rowId); if(!row) return;
+  row.area = parseFloat(input.value)||0;
+  refreshAfterRow(recId, rowId, row);
+  updAfterTots(recId);
+  persistRecord(rec);
+}
+
+function uAfterThick(recId, rowId, val) {
+  const rec=gr(recId); if(!rec) return;
+  const row=(rec.afterRows||[]).find(r=>r.id===rowId); if(!row) return;
+  row.thickness = val;
+  refreshAfterRow(recId, rowId, row);
+  updAfterTots(recId);
+  persistRecord(rec);
+}
+
+function refreshAfterRow(recId, rowId, row) {
+  const a=+row.area||0, t=row.thickness||'';
+  const el = document.getElementById(`atons-${recId}-${rowId}`);
+  if (el) el.textContent = a&&t ? calcTons(a,t).toFixed(2) : '';
+}
+
+function updAfterTots(recId) {
+  const rec = gr(recId); if (!rec) return;
+  const ba = recAfterTot(rec,'area'), bt = recAfterTot(rec,'tons');
+  const g = id => document.getElementById(id);
+  if (g(`ata-${recId}`)) g(`ata-${recId}`).textContent = n(ba,1);
+  if (g(`att-${recId}`)) g(`att-${recId}`).textContent = n(bt);
+  // update or create collapsed summary after row
+  const cs = document.getElementById(`cs-${recId}`);
+  if (cs) {
+    let afterRow = document.getElementById(`csa-${recId}`) || cs.querySelector('.cs-after-row');
+    if (rec.afterRows && rec.afterRows.length > 0) {
+      if (!afterRow) {
+        afterRow = document.createElement('div');
+        afterRow.className = 'cs-after-row';
+        afterRow.id = `csa-${recId}`;
+        cs.appendChild(afterRow);
+      }
+      const ta2 = recTot(rec,'area'), tt2 = recTot(rec,'tons');
+      const da2 = +(ba-ta2).toFixed(1), dt2 = +(bt-tt2).toFixed(2);
+      const diffCol = v => v>0?'#16a34a':v<0?'#dc2626':'#64748b';
+      const diffFmt = (v,d) => v===0 ? '—' : (v>0?'+':'')+v.toFixed(d);
+      afterRow.innerHTML = `
+        <div class="cs-grid" style="margin-top:6px">
+          <div class="cs-cell after"><div class="cs-cell-label">面積（後）</div><span class="cs-cell-val">${n(ba,1)}</span><span class="cs-cell-unit"> m²</span></div>
+          <div class="cs-cell after"><div class="cs-cell-label">噸數（後）</div><span class="cs-cell-val">${n(bt)}</span><span class="cs-cell-unit"> T</span></div>
+          <div class="cs-cell" style="background:#f8fafc;border:1px solid #e2e8f0">
+            <div class="cs-cell-label" style="color:#64748b">差異</div>
+            <div style="font-size:15px;font-weight:700;white-space:nowrap"><span style="color:${diffCol(da2)}">${diffFmt(da2,1)}</span><span style="font-size:12px;color:#64748b"> m²</span> <span style="color:#cbd5e1;font-size:12px">·</span> <span style="color:${diffCol(dt2)}">${diffFmt(dt2,2)}</span><span style="font-size:12px;color:#64748b"> T</span></div>
+          </div>
+        </div>`;
+    } else if (afterRow) {
+      afterRow.remove();
+    }
+  }
+  // update diff box
+  updateDiffBox(recId);
+}
+
+function copyBeforeToAfter(recId) {
+  const rec = gr(recId); if (!rec) return;
+  if (rec.afterRows && rec.afterRows.length > 0) {
+    if (!confirm('施工後已有資料，確定要覆蓋並複製施工前路段嗎？')) return;
+  }
+  // Deep copy before rows, assign new IDs
+  rec.afterRows = rec.rows.map(r => ({
+    id: Date.now() + Math.random()*10000|0,
+    segment: r.segment || '',
+    area: r.area || 0,
+    thickness: r.thickness || ''
+  }));
+  persistRecord(rec);
+  // Re-render the after tbody
+  const tbody = document.getElementById(`atb-${recId}`);
+  if (tbody) {
+    tbody.innerHTML = rec.afterRows.map((r,i) => renderAfterRow(rec,r,i)
+      .replace(/^<tr[^>]*>|<\/tr>$/g,'')).join('');
+    // wrap each in tr
+    tbody.innerHTML = rec.afterRows.map((r,i) => renderAfterRow(rec,r,i)).join('');
+  }
+  updAfterTots(recId);
+  showToast('已複製施工前路段 ✓', 'success');
+}
+
+function updateDiffBox(recId) {
+  const rec = gr(recId); if (!rec) return;
+  const ta = recTot(rec,'area'), tt = recTot(rec,'tons');
+  const ba = recAfterTot(rec,'area'), bt = recAfterTot(rec,'tons');
+  const da = +(ba-ta).toFixed(1), dt = +(bt-tt).toFixed(2);
+  const fmtDiff = (v,d) => v===0 ? '—' : (v>0?'+':'')+v.toFixed(d);
+  const cls = v => v>0?'diff-pos':v<0?'diff-neg':'diff-zero';
+
+  // find container — it's the sibling after the after-table section
+  const bd = document.getElementById(`bd-${recId}`);
+  if (!bd) return;
+  let diffEl = document.getElementById(`diff-${recId}`);
+
+  if (!rec.afterRows || !rec.afterRows.length) {
+    if (diffEl) diffEl.remove();
+    return;
+  }
+
+  if (!diffEl) {
+    // Create and insert before print button
+    diffEl = document.createElement('div');
+    diffEl.id = `diff-${recId}`;
+    diffEl.className = 'diff-box';
+    const printBtn = bd.querySelector('.btn-print');
+    if (printBtn) bd.insertBefore(diffEl, printBtn);
+    else bd.appendChild(diffEl);
+  }
+
+  diffEl.innerHTML = `
+    <div class="diff-box-title">📊 施工前後差異</div>
+    <div class="diff-row header"><span>項目</span><span style="text-align:right">施工前</span><span style="text-align:right">施工後</span><span style="text-align:right">差異</span></div>
+    <div class="diff-row"><span>面積 (m²)</span><span class="diff-val">${n(ta,1)}</span><span class="diff-val" style="color:#16a34a">${n(ba,1)}</span><span class="diff-val ${cls(da)}">${fmtDiff(da,1)}</span></div>
+    <div class="diff-row"><span>噸數 (T)</span><span class="diff-val">${n(tt)}</span><span class="diff-val" style="color:#16a34a">${n(bt)}</span><span class="diff-val ${cls(dt)}">${fmtDiff(dt)}</span></div>`;
+}
+
 // ══════════════════════════════════════════
 //  UTILS
 // ══════════════════════════════════════════
@@ -1613,6 +2065,12 @@ document.getElementById('previewMo').addEventListener('click',function(e){
 // ══════════════════════════════════════════
 loadLocal();
 render();
+window.addEventListener('scroll',()=>{
+  const btn=document.getElementById('toTop');
+  if(!btn) return;
+  if(window.scrollY>300) btn.classList.add('show');
+  else btn.classList.remove('show');
+},{passive:true});
 initFirebase().then(updateSyncUI).catch(()=>updateSyncUI());
 updateOfflineBanner();
 </script>
