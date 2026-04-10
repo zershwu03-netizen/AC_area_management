@@ -199,7 +199,7 @@ table.dt tbody tr:last-child td{border-bottom:none;}
 
 /* LOCKED CARD */
 .record-card.locked{border-color:#94a3b8 !important;opacity:.85;}
-.locked-badge{font-size:10px;font-weight:700;color:#166534;background:#dcfce7;border:1px solid #86efac;border-radius:4px;padding:2px 6px;white-space:nowrap;flex-shrink:0;}
+.locked-badge{font-size:10px;font-weight:700;color:#166534;background:#dcfce7;border:1px solid #86efac;border-radius:4px;padding:2px 8px;white-space:nowrap;flex-shrink:0;max-width:200px;overflow:hidden;text-overflow:ellipsis;}
 
 /* LONG-PRESS MENU */
 .ctx-menu{display:none;position:fixed;z-index:300;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.15);min-width:180px;overflow:hidden;}
@@ -689,7 +689,7 @@ function renderCard(rec){
       <span class="tag accent" id="td-${rec.id}">${eh(rec.date||'--')}</span>
       <span class="tag"        id="tw-${rec.id}">${eh(rec.weekday||'')}</span>
       <span class="tag warn"   id="ts-${rec.id}">${eh(rec.shift||'--')}</span>
-      ${locked ? '<span class="locked-badge">✅ 已完工</span>' : ''}
+      ${locked ? `<span class="locked-badge" id="lb-${rec.id}">✅ 已完工${rec.acceptDate ? '　驗收：'+rec.acceptDate : '　⏳ 待驗收'}</span>` : ''}
     </div>
     <div class="record-actions">
       <div class="card-check" id="chk-${rec.id}" onclick="event.stopPropagation();toggleBatchSelect(${rec.id},this)"></div>
@@ -731,6 +731,10 @@ function renderCard(rec){
     </div>` : ''}
   </div>
   <div class="record-body" id="bd-${rec.id}" onclick="event.stopPropagation()" style="${locked?'pointer-events:none;opacity:.7':''}">
+    ${locked ? `<div style="display:flex;align-items:center;gap:8px;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:9px 12px;pointer-events:auto">
+      <span style="font-size:13px;font-weight:700;color:#16a34a;white-space:nowrap">驗收日期</span>
+      <input class="fi" style="background:#fff;flex:1;font-size:14px;pointer-events:auto" value="${ea(rec.acceptDate||'')}" oninput="uAccept(${rec.id},this.value)" placeholder="115/4/20">
+    </div>` : ''}
     <div class="info-grid">
       <div class="fg"><div class="fl">派案地點</div>
         <div class="sw">
@@ -880,6 +884,16 @@ function toggle(id){
   if(ch) ch.style.transform=o?'rotate(180deg)':'';
 }
 function gr(id){return records.find(r=>r.id===id);}
+
+// 驗收日期
+function uAccept(id, val) {
+  const rec = gr(id); if (!rec) return;
+  rec.acceptDate = val;
+  persistRecord(rec);
+  // update badge
+  const badge = document.getElementById(`lb-${id}`);
+  if (badge) badge.textContent = '✅ 已完工' + (val ? '　驗收：' + val : '　⏳ 待驗收');
+}
 
 // 日/夜切換
 function uShift(id, val, btn) {
@@ -1350,9 +1364,10 @@ function copyRecord(id) {
 function toggleLock(id) {
   const rec = gr(id); if (!rec) return;
   rec.locked = !rec.locked;
+  if (!rec.locked) rec.acceptDate = '';  // clear on unlock
   persistRecord(rec);
   render();
-  showToast(rec.locked ? '✅ 已標記為完工' : '🔓 已取消完工', 'success');
+  showToast(rec.locked ? '✅ 已標記為完工，請展開填寫驗收日期' : '🔓 已取消完工', 'success');
 }
 
 // ══════════════════════════════════════════
