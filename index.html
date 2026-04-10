@@ -1112,23 +1112,52 @@ function renderFiltered() {
     groups[key].push(rec);
   });
 
-  // Render
-  rl.innerHTML = order.map(key => {
-    const recs = groups[key];
-    const id = 'mg-' + key.replace(/[^0-9a-z]/gi,'');
+  // Separate active vs completed records
+  const activeOrder = [], completedOrder = [];
+  const activeGroups = {}, completedGroups = {};
+
+  order.forEach(key => {
+    const active = groups[key].filter(r => !r.locked);
+    const done   = groups[key].filter(r => r.locked);
+    if (active.length) { activeGroups[key] = active; activeOrder.push(key); }
+    if (done.length)   { completedGroups[key] = done; completedOrder.push(key); }
+  });
+
+  const renderGroup = (key, recs, collapsed) => {
+    const id = 'mg-' + key.replace(/[^0-9a-z]/gi,'') + (collapsed?'-done':'');
+    const allDone = recs.every(r => r.locked);
     return `<div class="month-group" id="${id}">
       <div class="month-header" onclick="toggleMonth('${id}')">
-        <span class="month-title">📅 ${key}</span>
+        <span class="month-title">${allDone ? '✅' : '📅'} ${key}</span>
         <div style="display:flex;align-items:center;gap:8px">
+          ${allDone ? '<span style="font-size:11px;font-weight:700;color:#16a34a;background:#f0fdf4;border:1px solid #86efac;border-radius:20px;padding:2px 8px">已完工</span>' : ''}
           <span class="month-count">${recs.length} 筆</span>
-          <span class="month-chevron" id="chev-${id}">▾</span>
+          <span class="month-chevron" id="chev-${id}" style="${collapsed?'transform:rotate(-90deg)':''}">▾</span>
         </div>
       </div>
-      <div class="month-cards" id="cards-${id}">
+      <div class="month-cards${collapsed?' collapsed':''}" id="cards-${id}">
         ${recs.map(r => renderCard(r)).join('')}
       </div>
     </div>`;
-  }).join('');
+  };
+
+  let html = '';
+
+  // Active records first (expanded)
+  if (activeOrder.length) {
+    html += activeOrder.map(key => renderGroup(key, activeGroups[key], false)).join('');
+  }
+
+  // Completed records section (expanded)
+  if (completedOrder.length) {
+    html += `<div style="margin-top:8px;margin-bottom:8px;padding:6px 4px;display:flex;align-items:center;gap:8px;border-top:2px dashed #86efac">
+      <span style="font-size:12px;font-weight:700;color:#16a34a;letter-spacing:.5px">✅ 已完工記錄</span>
+      <span style="font-size:11px;color:var(--text-dim)">${completedOrder.reduce((s,k)=>s+completedGroups[k].length,0)} 筆</span>
+    </div>`;
+    html += completedOrder.map(key => renderGroup(key, completedGroups[key], false)).join('');
+  }
+
+  rl.innerHTML = html;
 
   updateJumpPicker(order);
 }
