@@ -481,15 +481,10 @@ function loadLocal() {
   try { cases     = JSON.parse(localStorage.getItem(CASE_KEY))  || []; } catch { cases=[]; }
   try { materials = JSON.parse(localStorage.getItem(MAT_KEY))   || DEF_MATS.slice(); } catch { materials=DEF_MATS.slice(); }
   try { locations = JSON.parse(localStorage.getItem(LOC_KEY))   || DEF_LOCS.slice(); } catch { locations=DEF_LOCS.slice(); }
-  // Migrate old records: if record has caseLocation/caseNum but no caseId, create a case for it
+  // Migrate old records without caseId
   migrateToCases();
-  // Only seed on true first-ever launch (localStorage key has never been written)
-  const everInitialized = localStorage.getItem('app_initialized');
-  if (!everInitialized && !cases.length && !records.length) {
-    seedDemo();
-  }
-  // Mark as initialized so seedDemo never runs again
-  localStorage.setItem('app_initialized', '1');
+  // Never auto-seed - user starts fresh with empty state
+  // seedDemo only called explicitly if needed
 }
 function saveLocal() {
   localStorage.setItem(STORE_KEY, JSON.stringify(records));
@@ -520,16 +515,23 @@ function migrateToCases() {
   const oldRecs = records.filter(r => !r.caseId);
   if (!oldRecs.length) return;
   const map = {};
+  // Build map from existing cases first to avoid duplicates
+  cases.forEach(c => {
+    const key = (c.caseLocation||'') + '|' + (c.caseNum||'');
+    map[key] = c;
+  });
+  let changed = false;
   oldRecs.forEach(r => {
     const key = (r.caseLocation||'') + '|' + (r.caseNum||'');
     if (!map[key]) {
       const cid = Date.now() + Math.random()*10000|0;
-      map[key] = { id:cid, caseLocation:r.caseLocation||'板橋', caseNum:r.caseNum||'', preAcceptDate: r.preAcceptDate||'', mainAcceptDate: r.mainAcceptDate||'' };
+      map[key] = { id:cid, caseLocation:r.caseLocation||'板橋', caseNum:r.caseNum||'', preAcceptDate:'', mainAcceptDate:'' };
       cases.push(map[key]);
     }
     r.caseId = map[key].id;
+    changed = true;
   });
-  saveLocal();
+  if (changed) saveLocal();
 }
 // 組合完整派案名稱（用於列印/Excel標題）
 function buildCaseNo(rec) {
@@ -571,17 +573,29 @@ async function initFirebase() {
     fbApp = getApps().length ? getApp() : initializeApp(cfg);
     fbDB  = getFirestore(fbApp);
 
-    // Listen to records — 只在其他裝置有變動時才重新渲染
+    // Listen to cases AND records — wait for both before rendering
+    window._snapReady = { records: false, cases: false };
+
+    onSnapshot(collection(fbDB,'cases'), snap => {
+      if (window._suppressSnapshot) return;
+      const docs = [];
+      snap.forEach(d => docs.push(d.data()));
+      cases = docs;
+      localStorage.setItem(CASE_KEY, JSON.stringify(cases));
+      window._snapReady.cases = true;
+      if (window._snapReady.records) render();
+    }, err => { console.warn('Firestore cases error:', err); });
+
     if (fbUnsub) fbUnsub();
     fbUnsub = onSnapshot(collection(fbDB,'records'), snap => {
-      // 如果是自己觸發的寫入，忽略這次 snapshot（避免重新渲染打斷輸入）
       if (window._suppressSnapshot) return;
       const docs = [];
       snap.forEach(d => docs.push(d.data()));
       docs.sort((a,b)=>(b.id||0)-(a.id||0));
       records = docs;
-      saveLocal();
-      render();
+      localStorage.setItem(STORE_KEY, JSON.stringify(records));
+      window._snapReady.records = true;
+      if (window._snapReady.cases) render();
     }, err => { console.warn('Firestore error:', err); });
 
     // Listen to materials
