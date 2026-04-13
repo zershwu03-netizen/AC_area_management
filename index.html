@@ -305,7 +305,7 @@ table.dt tbody tr:last-child td{border-bottom:none;}
 
 <div class="main">
   <div class="stats-bar" style="align-items:stretch">
-    <div class="stat-chip"><div class="val" id="stR">0</div><div class="lbl">施工記錄筆數</div></div>
+    <div class="stat-chip"><div class="val" id="stR">0</div><div class="lbl">派案/記錄</div></div>
     <div class="stat-chip" onclick="openStatsModal()" style="cursor:pointer;border-color:var(--accent);background:#eff6ff">
       <div class="val" style="font-size:22px">📊</div>
       <div class="lbl" style="color:var(--accent)">派案統計</div>
@@ -352,9 +352,9 @@ table.dt tbody tr:last-child td{border-bottom:none;}
     </div>
   </div>
   <div class="section-label">施工記錄</div>
-  <div class="add-card" onclick="addRecord()">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:17px;height:17px"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
-    新增施工記錄
+  <div class="add-card" onclick="addCase()" style="border-color:var(--accent);color:var(--accent);background:#eff6ff">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:17px;height:17px"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+    新增派案
   </div>
   <div class="records-list" id="rl"></div>
 </div>
@@ -446,7 +446,8 @@ table.dt tbody tr:last-child td{border-bottom:none;}
 // ══════════════════════════════════════════
 //  CONSTANTS
 // ══════════════════════════════════════════
-const STORE_KEY  = 'cr_v5';
+const STORE_KEY  = 'cr_v6';
+const CASE_KEY   = 'cases_v1';
 const MAT_KEY    = 'mat_v2';
 const LOC_KEY    = 'loc_v1';
 const WEEKDAYS   = ['日','一','二','三','四','五','六'];
@@ -458,6 +459,7 @@ const DENSITY    = 2.3;
 //  STATE
 // ══════════════════════════════════════════
 let records   = [];
+let cases     = [];  // [{id, caseLocation, caseNum, preAcceptDate, mainAcceptDate}]
 let materials = [];
 let locations = [];
 let delTarget = null;
@@ -471,28 +473,51 @@ let fbConnected = false;
 // ══════════════════════════════════════════
 function loadLocal() {
   try { records   = JSON.parse(localStorage.getItem(STORE_KEY)) || []; } catch { records=[]; }
+  try { cases     = JSON.parse(localStorage.getItem(CASE_KEY))  || []; } catch { cases=[]; }
   try { materials = JSON.parse(localStorage.getItem(MAT_KEY))   || DEF_MATS.slice(); } catch { materials=DEF_MATS.slice(); }
   try { locations = JSON.parse(localStorage.getItem(LOC_KEY))   || DEF_LOCS.slice(); } catch { locations=DEF_LOCS.slice(); }
-  if (!records.length) seedDemo();
+  // Migrate old records: if record has caseLocation/caseNum but no caseId, create a case for it
+  migrateToCases();
+  if (!records.length && !cases.length) seedDemo();
 }
 function saveLocal() {
   localStorage.setItem(STORE_KEY, JSON.stringify(records));
+  localStorage.setItem(CASE_KEY,  JSON.stringify(cases));
   localStorage.setItem(MAT_KEY,   JSON.stringify(materials));
   localStorage.setItem(LOC_KEY,   JSON.stringify(locations));
 }
 
 function seedDemo() {
+  const cid = Date.now();
+  cases = [{ id:cid, caseLocation:'板橋', caseNum:'八', preAcceptDate:'', mainAcceptDate:'' }];
   records = [{
-    id:Date.now(), caseLocation:'板橋', caseNum:'八',
+    id:cid+1, caseId:cid,
     date:'115/3/8', weekday:'六',
     shift:'夜間', prepare:'21:30', milling:'22:00', paving:'23:00', zone:'重慶路245巷', material:'改三1"',
     rows:[
-      {id:1,segment:'重慶路245巷至223巷',area:96,   thickness:'20'},
-      {id:2,segment:'223巷口至221號',    area:124,  thickness:'20'},
-      {id:3,segment:'221號至大豐街',     area:113.4,thickness:'20'},
-      {id:4,segment:'大豐街至忠孝路',    area:403.2,thickness:'20'},
+      {id:1,segment:'重慶路245巷至223巷',area:96,   thickness:'20', signs:''},
+      {id:2,segment:'223巷口至221號',    area:124,  thickness:'20', signs:''},
+      {id:3,segment:'221號至大豐街',     area:113.4,thickness:'20', signs:''},
+      {id:4,segment:'大豐街至忠孝路',    area:403.2,thickness:'20', signs:''},
     ]
   }];
+  saveLocal();
+}
+
+function migrateToCases() {
+  // Group old records (without caseId) by caseLocation+caseNum
+  const oldRecs = records.filter(r => !r.caseId);
+  if (!oldRecs.length) return;
+  const map = {};
+  oldRecs.forEach(r => {
+    const key = (r.caseLocation||'') + '|' + (r.caseNum||'');
+    if (!map[key]) {
+      const cid = Date.now() + Math.random()*10000|0;
+      map[key] = { id:cid, caseLocation:r.caseLocation||'板橋', caseNum:r.caseNum||'', preAcceptDate: r.preAcceptDate||'', mainAcceptDate: r.mainAcceptDate||'' };
+      cases.push(map[key]);
+    }
+    r.caseId = map[key].id;
+  });
   saveLocal();
 }
 // 組合完整派案名稱（用於列印/Excel標題）
@@ -604,6 +629,31 @@ function updateSyncUI(state) {
 // ══════════════════════════════════════════
 //  CRUD OPERATIONS (local + cloud)
 // ══════════════════════════════════════════
+async function persistCase(c) {
+  const i = cases.findIndex(x=>x.id===c.id);
+  if (i>=0) cases[i]=c; else cases.push(c);
+  saveLocal();
+  if (fbConnected && window._fbSaveCase) {
+    updateSyncUI('syncing');
+    try { await window._fbSaveCase(c); updateSyncUI('synced'); }
+    catch(e) { showToast('雲端同步失敗','error'); updateSyncUI(); }
+  }
+}
+
+async function removeCase(id) {
+  cases = cases.filter(c=>c.id!==id);
+  // also remove all records belonging to this case
+  const toRemove = records.filter(r=>r.caseId===id);
+  records = records.filter(r=>r.caseId!==id);
+  saveLocal();
+  if (fbConnected) {
+    if (window._fbDelCase) try { await window._fbDelCase(id); } catch(e){}
+    for (const r of toRemove) {
+      if (window._fbDel) try { await window._fbDel(r.id); } catch(e){}
+    }
+  }
+}
+
 async function persistRecord(rec) {
   const i = records.findIndex(r=>r.id===rec.id);
   if (i>=0) records[i]=rec; else records.unshift(rec);
@@ -738,6 +788,7 @@ function renderCard(rec){
       <div class="cs-cell before"><div class="cs-cell-label">噸數（前）</div><span class="cs-cell-val" id="cs-t-${rec.id}">${n(tt)}</span><span class="cs-cell-unit"> T</span></div>
       <div class="cs-cell before"><div class="cs-cell-label">刨除（前）</div><span class="cs-cell-val" id="cs-m-${rec.id}">${n(tm)}</span><span class="cs-cell-unit"> T</span></div>
     </div>
+    ${(()=>{ const sc=(rec.rows||[]).reduce((s,r)=>s+(+r.signs||0),0); return sc>0?`<span id="sign-count-${rec.id}" style="font-size:12px;font-weight:700;color:#1d4ed8;background:#eff6ff;border:1px solid #bfdbfe;border-radius:4px;padding:2px 7px;margin-top:4px;display:inline-block">📋 告示牌 ${sc} 張</span>`:`<span id="sign-count-${rec.id}" style="display:none"></span>`; })()}
     ${(rec.afterRows&&rec.afterRows.length) ? `
     <div class="cs-after-row" id="csa-${rec.id}">
       <div class="cs-grid" style="margin-top:6px">
@@ -793,8 +844,9 @@ function renderCard(rec){
       <div class="tbl-wrap"><table class="dt">
         <thead><tr>
           <th style="width:30px">順序</th><th>施工路段</th>
-          <th style="width:62px">面積(m²)</th><th style="width:60px">厚度(cm)</th>
-          <th style="width:64px">噸數(T)</th><th style="width:68px">刨除(-0.5)</th>
+          <th style="width:60px">面積(m²)</th><th style="width:56px">厚度(cm)</th>
+          <th style="width:60px">噸數(T)</th><th style="width:64px">刨除(-0.5)</th>
+          <th style="width:44px">告示牌</th>
           <th style="width:26px"></th>
         </tr></thead>
         <tbody id="tb-${rec.id}">${rec.rows.map((r,i)=>renderRow(rec,r,i)).join('')}</tbody>
@@ -813,7 +865,7 @@ function renderCard(rec){
             <td style="color:var(--text-dim);font-size:10px">總噸數(T)</td>
             <td id="st-${rec.id}" style="color:var(--accent2)">${n(tt)}</td>
             <td id="sm-${rec.id}" style="font-size:11px;color:var(--text-dim)">${n(tm)}</td>
-            <td></td>
+            <td></td><td></td>
           </tr>
         </tfoot>
       </table></div>
@@ -885,6 +937,7 @@ function renderRow(rec,row,idx){
     <td><input class="ci" type="number" step="0.5" value="${ea(t)}" oninput="urT(${rec.id},${row.id},this.value)" placeholder="cm"></td>
     <td><div class="cr" id="tn-${rec.id}-${row.id}">${tons}</div></td>
     <td><div class="cr dim" id="mn-${rec.id}-${row.id}">${mill}</div></td>
+    <td><input class="ci" type="number" min="0" step="1" value="${row.signs||''}" oninput="urf(${rec.id},${row.id},'signs',this.value);updSignCount(${rec.id})" placeholder="0" style="min-width:36px;max-width:48px"></td>
     <td><button class="del-row-btn" onclick="delRow(${rec.id},${row.id})">×</button></td>
   </tr>`;
 }
@@ -1022,34 +1075,91 @@ function delRow(rId,rId2){
   const el=document.getElementById(`tr-${rId}-${rId2}`);if(el)el.remove();
   reindex(rId); updTots(rId); persistRecord(rec);
 }
+function updSignCount(recId) {
+  const rec = gr(recId); if (!rec) return;
+  const total = (rec.rows||[]).reduce((s,r)=>s+(+r.signs||0),0);
+  // update collapsed card summary sign count
+  const el = document.getElementById(`sign-count-${recId}`);
+  if (el) { el.textContent = total > 0 ? `📋 ${total}` : ''; el.style.display = total>0?'':'none'; }
+}
+
 function reindex(rId){
   const tb=document.getElementById(`tb-${rId}`);if(!tb)return;
   tb.querySelectorAll('tr').forEach((tr,i)=>{const c=tr.querySelector('.cr');if(c)c.textContent=i+1;});
 }
 
-function addRecord(){
-  const d=new Date(),nid=Date.now();
-  const rec={id:nid,
-    caseLocation: locations[0]||'板橋',
-    caseNum: '',
+function addCase() {
+  const cid = Date.now();
+  const c = { id:cid, caseLocation:locations[0]||'板橋', caseNum:'', preAcceptDate:'', mainAcceptDate:'' };
+  cases.push(c);
+  persistCase(c);
+  render();
+  setTimeout(()=>{
+    const el = document.getElementById('cc-'+cid);
+    if (el) el.scrollIntoView({behavior:'smooth',block:'start'});
+  }, 80);
+  showToast('已新增派案','success');
+}
+
+function addRecordToCase(caseId) {
+  const c = cases.find(x=>x.id===caseId); if (!c) return;
+  const d = new Date(), nid = Date.now();
+  const rec = {
+    id:nid, caseId:caseId,
     date:`${d.getFullYear()-1911}/${d.getMonth()+1}/${d.getDate()}`,
-    weekday:WEEKDAYS[d.getDay()],shift:'夜間',milling:'',paving:'',zone:'',material:materials[0]||'',
-    rows:[{id:nid+1,segment:'',area:0,thickness:''}]};
-  records.push(rec);   // 新的加在下方，舊的在上
-  persistRecord(rec); render();
-  // scroll to new card and open it
+    weekday:WEEKDAYS[d.getDay()], shift:'夜間',
+    prepare:'', milling:'', paving:'',
+    zone:'', material:materials[0]||'',
+    rows:[{id:nid+1,segment:'',area:0,thickness:'',signs:''}]
+  };
+  records.push(rec);
+  persistRecord(rec);
+  render();
   setTimeout(()=>{
     toggle(nid);
-    const el=document.getElementById(`card-${nid}`);
-    if(el) el.scrollIntoView({behavior:'smooth',block:'start'});
-  },80);
+    const el = document.getElementById(`card-${nid}`);
+    if (el) el.scrollIntoView({behavior:'smooth',block:'nearest'});
+  }, 80);
   showToast('已新增施工記錄','success');
 }
+
+// Kept for backward compat
+function addRecord() { addCase(); }
+function uCase(caseId, field, val) {
+  const c = cases.find(x=>x.id===caseId); if (!c) return;
+  if (field==='caseLocation' && val==='__addloc__') {
+    openLocMo(); const sel=document.querySelector(`#cc-${caseId} select`); if(sel)sel.value=c.caseLocation; return;
+  }
+  c[field] = val;
+  persistCase(c);
+  // Update badge in header
+  const cid='cc-'+caseId;
+  const locEl=document.querySelector(`#${cid} .case-loc-big`);
+  const numEl=document.querySelector(`#${cid} .case-num-big`);
+  if(locEl&&field==='caseLocation') locEl.textContent=val||'?';
+  if(numEl&&field==='caseNum') numEl.textContent='第'+(val||'?')+'派案';
+  // Update accept badge
+  if(field==='preAcceptDate'||field==='mainAcceptDate') {
+    const row1=document.querySelector(`#${cid} .case-header-row1`);
+    if(row1){
+      let ab=row1.querySelector('.case-accept-badge');
+      if(!ab){ab=document.createElement('span');ab.className='case-accept-badge';row1.appendChild(ab);}
+      if(c.mainAcceptDate){ab.className='case-accept-badge done';ab.textContent='正驗：'+c.mainAcceptDate;}
+      else if(c.preAcceptDate){ab.className='case-accept-badge done';ab.textContent='初驗：'+c.preAcceptDate;}
+      else{ab.className='case-accept-badge pending';ab.textContent='⏳ 待驗收';}
+    }
+  }
+}
+
+let delCaseTarget = null;
+function askDelCase(id){ delCaseTarget=id; document.getElementById('delMo').classList.add('open'); }
+
 function askDel(id){delTarget=id;document.getElementById('delMo').classList.add('open');}
 function closeDelMo(){document.getElementById('delMo').classList.remove('open');delTarget=null;}
 async function confirmDel(){
-  if(delTarget==null)return;
-  await removeRecord(delTarget); closeDelMo(); render(); showToast('已刪除記錄','error');
+  if(delTarget!=null){ await removeRecord(delTarget); delTarget=null; }
+  else if(delCaseTarget!=null){ await removeCase(delCaseTarget); delCaseTarget=null; }
+  closeDelMo(); render(); showToast('已刪除','error');
 }
 
 // Material modal
@@ -1106,58 +1216,6 @@ function removeLoc(i) {
 
 
 
-// ══════════════════════════════════════════
-//  CASE GROUP FUNCTIONS
-// ══════════════════════════════════════════
-function toggleCase(cid) {
-  const recs = document.getElementById('recs-' + cid);
-  const chev = document.getElementById('chev-' + cid);
-  if (!recs) return;
-  const collapsed = recs.classList.toggle('collapsed');
-  if (chev) chev.style.transform = collapsed ? 'rotate(-90deg)' : '';
-}
-
-// Update acceptance date on all locked records in same case
-function uCaseAccept(caseKey, field, val) {
-  const caseRecs = records.filter(r => buildCaseNo(r) === caseKey && r.locked);
-  caseRecs.forEach(rec => {
-    rec[field] = val;
-    persistRecord(rec);
-  });
-  // Update badge in header
-  const cid = 'cc-' + caseKey.replace(/[^0-9a-z]/gi,'_');
-  const header = document.querySelector(`#${cid} .case-header-row1`);
-  if (header) {
-    const preEl  = document.querySelector(`#cas-${cid} input:nth-child(1)`);
-    const mainEl = document.querySelector(`#cas-${cid} input:nth-child(2)`);
-    // update accept badge
-    let badge = header.querySelector('.case-accept-badge');
-    if (!badge) { badge = document.createElement('span'); badge.className='case-accept-badge'; header.appendChild(badge); }
-    const pre = preEl?.value||'', main = mainEl?.value||val;
-    if (field==='mainAcceptDate'&&val) { badge.className='case-accept-badge done'; badge.textContent='正驗：'+val; }
-    else if (field==='preAcceptDate'&&val&&!main) { badge.className='case-accept-badge done'; badge.textContent='初驗：'+val; }
-    else if (!pre&&!main) { badge.className='case-accept-badge pending'; badge.textContent='⏳ 待驗收'; }
-  }
-}
-
-// Update sign count on all records in same case
-function uCaseSign(caseKey, val) {
-  const caseRecs = records.filter(r => buildCaseNo(r) === caseKey);
-  caseRecs.forEach(rec => {
-    rec.signCount = val;
-    persistRecord(rec);
-  });
-  // Update sign count badge in header
-  const cid = 'cc-' + caseKey.replace(/[^0-9a-z]/gi,'_');
-  const header = document.querySelector(`#${cid} .case-header-row1`);
-  if (header) {
-    let badge = header.querySelector('.sign-count-badge');
-    if (val) {
-      if (!badge) { badge = document.createElement('span'); badge.className='sign-count-badge'; header.insertBefore(badge, header.children[2]); }
-      badge.textContent = '📋 告示牌 ' + val + ' 張';
-    } else if (badge) badge.remove();
-  }
-}
 
 // ══════════════════════════════════════════
 //  SEARCH & FILTER
@@ -1199,1087 +1257,153 @@ function getFiltered() {
   });
 }
 
-function getMonthKey(rec) {
-  const d = parseDate(rec.date);
-  if (!d || isNaN(d)) return '未知日期';
-  const y = d.getFullYear() - 1911;
-  const m = d.getMonth() + 1;
-  return `${y}年${m}月`;
+function getCaseRecords(caseId) {
+  return records
+    .filter(r => r.caseId === caseId)
+    .sort((a,b) => {
+      const da=parseDate(a.date), db=parseDate(b.date);
+      return (da?da.getTime():0) - (db?db.getTime():0);
+    });
+}
+
+function filterCases() {
+  // Filter cases that have at least one record matching search/filter
+  return cases.filter(c => {
+    const recs = getCaseRecords(c.id);
+    if (!recs.length) return true; // show empty cases
+    return recs.some(rec => {
+      if (activeFilter==='day'   && rec.shift!=='日間') return false;
+      if (activeFilter==='night' && rec.shift!=='夜間') return false;
+      if (!searchQ) return true;
+      const hay = [
+        c.caseLocation||'', c.caseNum||'',
+        (c.caseLocation||'')+'第'+(c.caseNum||'')+'派案',
+        rec.zone||'', rec.date||'', rec.material||'',
+        ...(rec.rows||[]).map(r=>r.segment||'')
+      ].join('　').toLowerCase();
+      return searchQ.split(' ').filter(Boolean).every(w=>hay.includes(w));
+    });
+  });
+}
+
+function renderCaseBigCard(c) {
+  const cid = 'cc-' + c.id;
+  const recs = getCaseRecords(c.id);
+  const totArea = recs.reduce((s,r)=>s+recTot(r,'area'),0);
+  const totTons = recs.reduce((s,r)=>s+recTot(r,'tons'),0);
+  const hasAfter = recs.some(r=>r.afterRows&&r.afterRows.length);
+  const totAfterArea = hasAfter ? recs.reduce((s,r)=>s+recAfterTot(r,'area'),0) : 0;
+  const totAfterTons = hasAfter ? recs.reduce((s,r)=>s+recAfterTot(r,'tons'),0) : 0;
+  const allDone = recs.length > 0 && recs.every(r=>r.locked);
+  const da = +(totAfterArea-totArea).toFixed(1);
+  const diffCol = v=>v>0?'#16a34a':v<0?'#dc2626':'#64748b';
+  const diffFmt = (v,d)=>v===0?'—':(v>0?'+':'')+v.toFixed(d);
+
+  // Accept badge
+  let acceptBadge = '';
+  if (allDone) {
+    if (c.mainAcceptDate) acceptBadge = `<span class="case-accept-badge done">正驗：${c.mainAcceptDate}</span>`;
+    else if (c.preAcceptDate) acceptBadge = `<span class="case-accept-badge done">初驗：${c.preAcceptDate}</span>`;
+    else acceptBadge = `<span class="case-accept-badge pending">⏳ 待驗收</span>`;
+  }
+
+  return `<div class="case-card" id="${cid}">
+    <div class="case-card-header" onclick="toggleCase('${cid}')">
+      <div class="case-header-left">
+        <div class="case-header-row1">
+          <span class="case-loc-big">${eh(c.caseLocation||'?')}</span>
+          <span class="case-num-big">第${eh(c.caseNum||'?')}派案</span>
+          ${acceptBadge}
+        </div>
+        <div class="case-header-row2">
+          <div class="case-stat"><span class="case-stat-label">面積</span><span class="case-stat-val">${totArea.toFixed(1)}</span><span class="case-stat-unit"> m²</span></div>
+          <div style="width:1px;height:14px;background:var(--border)"></div>
+          <div class="case-stat"><span class="case-stat-label">噸數</span><span class="case-stat-val">${totTons.toFixed(2)}</span><span class="case-stat-unit"> T</span></div>
+          ${hasAfter?`<div style="width:1px;height:14px;background:var(--border)"></div>
+          <div class="case-stat"><span class="case-stat-label" style="color:#16a34a">施工後</span><span class="case-stat-val" style="color:#16a34a">${totAfterArea.toFixed(1)}</span><span class="case-stat-unit"> m²</span></div>
+          <div class="case-stat"><span style="font-size:13px;font-weight:700;color:${diffCol(da)}">${diffFmt(da,1)}</span></div>`:''}
+          <div class="case-stat"><span class="case-stat-label">${recs.length} 筆</span></div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+        <div class="icon-btn danger-hover" onclick="event.stopPropagation();askDelCase(${c.id})" title="刪除派案" style="border-color:#fecaca;color:#dc2626">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:12px;height:12px"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
+        </div>
+        <span class="month-chevron" id="chev-${cid}">▾</span>
+      </div>
+    </div>
+
+    <!-- Case settings bar (location, caseNum, accept dates) -->
+    <div style="padding:8px 14px;background:#f8fafc;border-top:1px solid var(--border);display:flex;flex-wrap:wrap;gap:8px;align-items:center" onclick="event.stopPropagation()">
+      <div class="sw" style="flex-shrink:0">
+        <select class="fs" style="font-size:13px;padding:5px 24px 5px 8px;width:auto" onchange="uCase(${c.id},'caseLocation',this.value)">
+          ${locations.map(l=>`<option value="${ea(l)}"${c.caseLocation===l?' selected':''}>${eh(l)}</option>`).join('')}
+          <option value="" disabled>──</option><option value="__addloc__">＋ 管理地點…</option>
+        </select>
+      </div>
+      <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">
+        <span style="font-size:12px;color:var(--text-dim)">第</span>
+        <input class="fi" style="width:60px;font-size:13px;padding:5px 6px;text-align:center" value="${ea(c.caseNum||'')}" oninput="uCase(${c.id},'caseNum',this.value)" placeholder="八">
+        <span style="font-size:12px;color:var(--text-dim)">派案</span>
+      </div>
+      ${allDone?`<div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
+        <span style="font-size:12px;color:#16a34a;font-weight:600">初驗</span>
+        <input class="fi" style="width:100px;font-size:13px;padding:5px 7px" value="${ea(c.preAcceptDate||'')}" oninput="uCase(${c.id},'preAcceptDate',this.value)" placeholder="115/4/20">
+      </div>
+      <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
+        <span style="font-size:12px;color:#16a34a;font-weight:600">正驗</span>
+        <input class="fi" style="width:100px;font-size:13px;padding:5px 7px" value="${ea(c.mainAcceptDate||'')}" oninput="uCase(${c.id},'mainAcceptDate',this.value)" placeholder="115/5/10">
+      </div>`:''}
+    </div>
+
+    <!-- Records inside this case -->
+    <div class="case-records" id="recs-${cid}">
+      ${recs.map(r=>renderCard(r)).join('')}
+      <div style="padding:8px 10px">
+        <button class="add-row-btn" style="border-color:var(--accent);color:var(--accent)" onclick="addRecordToCase(${c.id})">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:13px;height:13px"><path d="M12 5v14M5 12h14"/></svg>新增施工記錄
+        </button>
+      </div>
+    </div>
+  </div>`;
 }
 
 function renderFiltered() {
   const rl = document.getElementById('rl');
-  const filtered = getSorted(getFiltered());
-  if (!filtered.length) {
-    rl.innerHTML = `<div style="text-align:center;padding:30px 14px;color:var(--text-dim);font-size:14px">
-      <div style="font-size:28px;margin-bottom:8px">🔍</div>找不到符合的記錄</div>`;
-    updateJumpPicker([]);
-    return;
+  const filteredCases = filterCases();
+
+  if (!filteredCases.length && !cases.length) {
+    rl.innerHTML = `<div style="text-align:center;padding:36px 14px;color:var(--text-dim);font-size:13px">
+      <div style="font-size:30px;margin-bottom:9px;opacity:.4">📋</div>尚無派案，點上方「新增派案」開始</div>`;
+    updateStats(); updateJumpPicker([]); return;
   }
 
-  // Group by month
-  const groups = {};
-  const order = [];
-  filtered.forEach(rec => {
-    const key = getMonthKey(rec);
-    if (!groups[key]) { groups[key] = []; order.push(key); }
-    groups[key].push(rec);
+  if (!filteredCases.length) {
+    rl.innerHTML = `<div style="text-align:center;padding:30px 14px;color:var(--text-dim);font-size:14px">
+      <div style="font-size:28px;margin-bottom:8px">🔍</div>找不到符合的記錄</div>`;
+    updateStats(); return;
+  }
+
+  // Separate active vs completed cases
+  const activeCases = filteredCases.filter(c => {
+    const recs = getCaseRecords(c.id);
+    return !recs.length || !recs.every(r=>r.locked);
+  });
+  const doneCases = filteredCases.filter(c => {
+    const recs = getCaseRecords(c.id);
+    return recs.length > 0 && recs.every(r=>r.locked);
   });
 
-  // Group by case (location + caseNum)
-  const caseMap = {};
-  const caseOrder = [];
-  filtered.forEach(rec => {
-    const key = buildCaseNo(rec) || '未命名派案';
-    if (!caseMap[key]) { caseMap[key] = { recs:[], loc: rec.caseLocation||'', num: rec.caseNum||'' }; caseOrder.push(key); }
-    caseMap[key].recs.push(rec);
-  });
-
-  // Separate active vs completed case groups
-  const activeCases = [], doneCases = [];
-  caseOrder.forEach(key => {
-    const allDone = caseMap[key].recs.every(r => r.locked);
-    if (allDone) doneCases.push(key); else activeCases.push(key);
-  });
-
-  const renderCaseCard = (key) => {
-    const { recs, loc, num } = caseMap[key];
-    const cid = 'cc-' + key.replace(/[^0-9a-z]/gi,'_');
-    // Totals across all records in this case
-    const totArea = recs.reduce((s,r)=>s+recTot(r,'area'),0);
-    const totTons = recs.reduce((s,r)=>s+recTot(r,'tons'),0);
-    const totAfterArea = recs.reduce((s,r)=>s+recAfterTot(r,'area'),0);
-    const totAfterTons = recs.reduce((s,r)=>s+recAfterTot(r,'tons'),0);
-    const hasAfter = recs.some(r=>r.afterRows&&r.afterRows.length);
-    const allDone = recs.every(r=>r.locked);
-    // Acceptance from first locked record (they share same case)
-    const doneRec = recs.find(r=>r.locked);
-    const preAccept  = doneRec?.preAcceptDate  || '';
-    const mainAccept = doneRec?.mainAcceptDate || '';
-    const signCount  = recs[0]?.signCount || '';
-
-    // accept badge text
-    let acceptBadge = '';
-    if (allDone) {
-      if (mainAccept) acceptBadge = `<span class="case-accept-badge done">正驗：${mainAccept}</span>`;
-      else if (preAccept) acceptBadge = `<span class="case-accept-badge done">初驗：${preAccept}</span>`;
-      else acceptBadge = `<span class="case-accept-badge pending">⏳ 待驗收</span>`;
-    }
-
-    // diff display
-    const daTot = +(totAfterArea-totArea).toFixed(1);
-    const dtTot = +(totAfterTons-totTons).toFixed(2);
-    const diffCol = v=>v>0?'#16a34a':v<0?'#dc2626':'#64748b';
-    const diffFmt = (v,d)=>v===0?'—':(v>0?'+':'')+v.toFixed(d);
-
-    return `<div class="case-card" id="${cid}">
-      <div class="case-card-header" onclick="toggleCase('${cid}')">
-        <div class="case-header-left">
-          <div class="case-header-row1">
-            <span class="case-loc-big">${eh(loc||'?')}</span>
-            <span class="case-num-big">第${eh(num||'?')}派案</span>
-            ${signCount?`<span class="sign-count-badge">📋 告示牌 ${signCount} 張</span>`:''}
-            ${acceptBadge}
-          </div>
-          <div class="case-header-row2">
-            <div class="case-stat"><span class="case-stat-label">面積</span><span class="case-stat-val">${totArea.toFixed(1)}</span><span class="case-stat-unit"> m²</span></div>
-            <div style="width:1px;height:14px;background:var(--border)"></div>
-            <div class="case-stat"><span class="case-stat-label">噸數</span><span class="case-stat-val">${totTons.toFixed(2)}</span><span class="case-stat-unit"> T</span></div>
-            ${hasAfter?`<div style="width:1px;height:14px;background:var(--border)"></div>
-            <div class="case-stat"><span class="case-stat-label" style="color:#16a34a">後</span><span class="case-stat-val" style="color:#16a34a">${totAfterArea.toFixed(1)}</span><span class="case-stat-unit"> m²</span></div>
-            <div class="case-stat"><span style="font-size:13px;font-weight:700;color:${diffCol(daTot)}">${diffFmt(daTot,1)}</span></div>`:''}
-            <div class="case-stat"><span class="case-stat-label">${recs.length} 筆</span></div>
-          </div>
-        </div>
-        <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
-          <span class="month-chevron" id="chev-${cid}">▾</span>
-        </div>
-      </div>
-
-      ${allDone ? `<div class="case-accept-section" id="cas-${cid}">
-        <span style="font-size:12px;font-weight:700;color:#16a34a;flex-shrink:0">驗收日期</span>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;flex:1;pointer-events:auto" onclick="event.stopPropagation()">
-          <div style="display:flex;align-items:center;gap:5px">
-            <span style="font-size:12px;color:#64748b;white-space:nowrap">初驗</span>
-            <input class="fi" style="background:#fff;width:110px;font-size:13px;padding:5px 8px;pointer-events:auto" value="${ea(preAccept)}" oninput="uCaseAccept('${key}','preAcceptDate',this.value)" placeholder="115/4/20">
-          </div>
-          <div style="display:flex;align-items:center;gap:5px">
-            <span style="font-size:12px;color:#64748b;white-space:nowrap">正驗</span>
-            <input class="fi" style="background:#fff;width:110px;font-size:13px;padding:5px 8px;pointer-events:auto" value="${ea(mainAccept)}" oninput="uCaseAccept('${key}','mainAcceptDate',this.value)" placeholder="115/5/10">
-          </div>
-          <div style="display:flex;align-items:center;gap:5px">
-            <span style="font-size:12px;color:#64748b;white-space:nowrap">📋 告示牌</span>
-            <input class="fi" style="background:#fff;width:70px;font-size:13px;padding:5px 8px;pointer-events:auto;text-align:center" value="${ea(signCount)}" oninput="uCaseSign('${key}',this.value)" placeholder="0 張">
-          </div>
-        </div>
-      </div>` : `<div style="pointer-events:auto;padding:6px 14px 2px;display:flex;align-items:center;gap:8px;background:#f8fafc;border-top:1px solid var(--border)" onclick="event.stopPropagation()">
-        <span style="font-size:12px;color:#64748b">📋 告示牌</span>
-        <input class="fi" style="background:#fff;width:70px;font-size:13px;padding:5px 8px;text-align:center;pointer-events:auto" value="${ea(signCount)}" oninput="uCaseSign('${key}',this.value)" placeholder="0 張">
-        <span style="font-size:12px;color:#64748b">張</span>
-      </div>`}
-
-      <div class="case-records" id="recs-${cid}">
-        ${recs.map(r=>renderCard(r)).join('')}
-      </div>
-    </div>`;
-  };
-
-  let html = '';
-  if (activeCases.length) html += activeCases.map(renderCaseCard).join('');
+  let html = activeCases.map(c=>renderCaseBigCard(c)).join('');
   if (doneCases.length) {
     html += `<div style="margin:10px 0 8px;padding:6px 4px;display:flex;align-items:center;gap:8px;border-top:2px dashed #86efac">
       <span style="font-size:12px;font-weight:700;color:#16a34a">✅ 已完工派案</span>
-      <span style="font-size:11px;color:var(--text-dim)">${doneCases.length} 個派案</span>
+      <span style="font-size:11px;color:var(--text-dim)">${doneCases.length} 個</span>
     </div>`;
-    html += doneCases.map(renderCaseCard).join('');
+    html += doneCases.map(c=>renderCaseBigCard(c)).join('');
   }
 
   rl.innerHTML = html;
-
-  updateJumpPicker(order);
+  updateStats();
+  updateJumpPicker(filteredCases.map(c=>`${c.caseLocation||''}第${c.caseNum||'?'}派案`));
 }
-
-function toggleMonth(id) {
-  const cards = document.getElementById('cards-' + id);
-  const chev  = document.getElementById('chev-' + id);
-  if (!cards) return;
-  const collapsed = cards.classList.toggle('collapsed');
-  if (chev) chev.style.transform = collapsed ? 'rotate(-90deg)' : '';
-}
-
-function updateJumpPicker(months) {
-  const sel = document.getElementById('jumpSel');
-  if (!sel) return;
-  const cur = sel.value;
-  sel.innerHTML = '<option value="">選擇月份…</option>' +
-    months.map(m => `<option value="${m}"${m===cur?' selected':''}>${m}</option>`).join('');
-}
-
-function jumpToMonth(key) {
-  if (!key) return;
-  const id = 'mg-' + key.replace(/[^0-9a-z]/gi,'');
-  const el = document.getElementById(id);
-  if (!el) return;
-  // Make sure the month is expanded
-  const cards = document.getElementById('cards-' + id);
-  const chev  = document.getElementById('chev-' + id);
-  if (cards && cards.classList.contains('collapsed')) {
-    cards.classList.remove('collapsed');
-    if (chev) chev.style.transform = '';
-  }
-  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  // Reset select so user can jump to same month again
-  setTimeout(() => { document.getElementById('jumpSel').value = ''; }, 800);
-}
-
-// ══════════════════════════════════════════
-//  STATS MODAL
-// ══════════════════════════════════════════
-function openStatsModal() {
-  const grid = document.getElementById('statsGrid');
-  if (!records.length) {
-    grid.innerHTML = '<div style="color:var(--text-dim);font-size:13px;padding:10px">尚無記錄</div>';
-    document.getElementById('statsMo').classList.add('open');
-    return;
-  }
-
-  // Group by caseNo
-  const map = {};
-  records.forEach(rec => {
-    const key = buildCaseNo(rec);
-    if (!map[key]) map[key] = { name: key, area: 0, tons: 0, count: 0 };
-    map[key].area  += recTot(rec, 'area');
-    map[key].tons  += recTot(rec, 'tons');
-    map[key].count += 1;
-  });
-
-  const list = Object.values(map).sort((a,b) => b.area - a.area);
-  const totArea = list.reduce((s,r) => s+r.area, 0);
-  const totTons = list.reduce((s,r) => s+r.tons, 0);
-
-  grid.innerHTML = list.map(r => `
-    <div class="stats-row">
-      <div>
-        <div class="stats-row-name">${eh(r.name)}</div>
-        <div style="font-size:11px;color:var(--text-dim);margin-top:2px">${r.count} 筆記錄</div>
-      </div>
-      <div class="stats-row-area">${r.area.toFixed(1)} m²</div>
-      <div class="stats-row-tons">${r.tons.toFixed(2)} T</div>
-    </div>`).join('') + `
-    <div class="stats-total">
-      <div style="font-size:14px;font-weight:800;color:var(--accent)">合計</div>
-      <div class="stats-row-area" style="font-size:15px">${totArea.toFixed(1)} m²</div>
-      <div class="stats-row-tons" style="font-size:15px">${totTons.toFixed(2)} T</div>
-    </div>`;
-
-  document.getElementById('statsMo').classList.add('open');
-}
-function closeStatsMo() { document.getElementById('statsMo').classList.remove('open'); }
-
-// ══════════════════════════════════════════
-//  OFFLINE DETECTION
-// ══════════════════════════════════════════
-function updateOfflineBanner() {
-  const banner = document.getElementById('offlineBanner');
-  if (!banner) return;
-  if (!navigator.onLine) {
-    banner.classList.add('show');
-  } else {
-    banner.classList.remove('show');
-    // if firebase connected, try to re-sync pending local changes
-    if (fbConnected) updateSyncUI('synced');
-  }
-}
-window.addEventListener('online',  () => { updateOfflineBanner(); showToast('網路已恢復 ✓', 'success'); });
-window.addEventListener('offline', () => { updateOfflineBanner(); showToast('已離線，資料暫存本機', 'error'); });
-
-// Stats
-function updateStats(){
-  document.getElementById('stR').textContent=records.length;
-}
-
-
-
-
-// ══════════════════════════════════════════
-//  SORT
-// ══════════════════════════════════════════
-let currentSort = 'date-desc';
-
-function setSort(s, el) {
-  currentSort = s;
-  document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
-  el.classList.add('active');
-  renderFiltered();
-}
-
-function getSorted(arr) {
-  return [...arr].sort((a, b) => {
-    if (currentSort === 'date-desc' || currentSort === 'date-asc') {
-      const da = parseDate(a.date), db = parseDate(b.date);
-      const ta = da ? da.getTime() : 0, tb = db ? db.getTime() : 0;
-      return currentSort === 'date-desc' ? tb - ta : ta - tb;
-    }
-    if (currentSort === 'area-desc' || currentSort === 'area-asc') {
-      const aa = recTot(a,'area'), ab = recTot(b,'area');
-      return currentSort === 'area-desc' ? ab - aa : aa - ab;
-    }
-    return 0;
-  });
-}
-
-// ══════════════════════════════════════════
-//  COPY RECORD
-// ══════════════════════════════════════════
-function copyRecord(id) {
-  const src = gr(id); if (!src) return;
-  const nid = Date.now();
-  const d = new Date();
-  const copy = JSON.parse(JSON.stringify(src));
-  copy.id   = nid;
-  copy.date = `${d.getFullYear()-1911}/${d.getMonth()+1}/${d.getDate()}`;
-  copy.weekday = WEEKDAYS[d.getDay()];
-  copy.locked = false;
-  copy.rows = copy.rows.map(r => ({ ...r, id: Date.now() + Math.random()*1000|0 }));
-  records.push(copy);
-  persistRecord(copy);
-  render();
-  setTimeout(() => {
-    toggle(nid);
-    const el = document.getElementById(`card-${nid}`);
-    if (el) el.scrollIntoView({ behavior:'smooth', block:'start' });
-  }, 80);
-  showToast('已複製派案 ✓', 'success');
-}
-
-// ══════════════════════════════════════════
-//  LOCK / UNLOCK
-// ══════════════════════════════════════════
-function toggleLock(id) {
-  const rec = gr(id); if (!rec) return;
-  rec.locked = !rec.locked;
-  if (!rec.locked) rec.acceptDate = '';  // clear on unlock
-  persistRecord(rec);
-  render();
-  showToast(rec.locked ? '✅ 已標記為完工，請展開填寫驗收日期' : '🔓 已取消完工', 'success');
-}
-
-// ══════════════════════════════════════════
-//  LONG PRESS CONTEXT MENU
-// ══════════════════════════════════════════
-let _lpTimer = null;
-let _ctxId   = null;
-
-function startLongPress(e, id) {
-  cancelLongPress();
-  _lpTimer = setTimeout(() => {
-    openCtx(e, id);
-  }, 550);
-}
-function cancelLongPress() {
-  clearTimeout(_lpTimer);
-  _lpTimer = null;
-}
-
-function openCtx(e, id) {
-  cancelLongPress();
-  _ctxId = id;
-  const rec = gr(id);
-  const menu = document.getElementById('ctxMenu');
-  const overlay = document.getElementById('ctxOverlay');
-  // update lock label
-  const lockLabel = document.getElementById('ctxLockLabel');
-  if (lockLabel) lockLabel.textContent = rec && rec.locked ? '取消完工' : '標記完工';
-  // position
-  const x = e.clientX || (e.touches && e.touches[0].clientX) || window.innerWidth/2;
-  const y = e.clientY || (e.touches && e.touches[0].clientY) || window.innerHeight/2;
-  menu.style.left = Math.min(x, window.innerWidth - 200) + 'px';
-  menu.style.top  = Math.min(y, window.innerHeight - 180) + 'px';
-  menu.classList.add('show');
-  overlay.classList.add('show');
-  if (navigator.vibrate) navigator.vibrate(30);
-}
-function closeCtx() {
-  document.getElementById('ctxMenu').classList.remove('show');
-  document.getElementById('ctxOverlay').classList.remove('show');
-  _ctxId = null;
-}
-function ctxAction(action) {
-  const id = _ctxId;
-  closeCtx();
-  if (!id) return;
-  if (action === 'copy')    copyRecord(id);
-  if (action === 'lock')    toggleLock(id);
-  if (action === 'preview') openPreview(id);
-  if (action === 'delete')  askDel(id);
-}
-
-// ══════════════════════════════════════════
-//  PRINT PREVIEW
-// ══════════════════════════════════════════
-let _previewId = null;
-
-function openPreview(id) {
-  const rec = gr(id); if (!rec) return;
-  _previewId = id;
-  // Build preview using same HTML as printRec (without the style tag, add to modal)
-  const ta = recTot(rec,'area'), tt = recTot(rec,'tons'), tm = recTot(rec,'mill');
-  const rows = rec.rows;
-  const rowsHtml = rows.map((row,i)=>{
-    const a=+row.area||0, t=row.thickness||'';
-    const tons=a&&t?calcTons(a,t).toFixed(2):'—';
-    const mill=a&&t?calcMill(a,t).toFixed(2):'—';
-    return `<tr style="font-size:14px">
-      <td style="text-align:center;padding:7px 5px">${i+1}</td>
-      <td style="padding:7px 5px">${eh(row.segment||'')}</td>
-      <td style="text-align:center;padding:7px 5px">${a||'—'}</td>
-      <td style="text-align:center;padding:7px 5px">${t||'—'}</td>
-      <td style="text-align:center;padding:7px 5px">${tons}</td>
-      <td style="text-align:center;padding:7px 5px">${mill}</td>
-    </tr>`;
-  }).join('');
-
-  // Build after rows HTML if exists
-  const afterHtml = (rec.afterRows&&rec.afterRows.length) ? `
-    <div style="margin-top:16px">
-      <div style="font-size:15px;font-weight:700;color:#16a34a;background:#f0fdf4;border-left:4px solid #16a34a;padding:5px 10px;border-radius:4px;margin-bottom:7px">✅ 施工後明細</div>
-      <table style="width:100%;border-collapse:collapse;font-size:13px">
-        <thead><tr style="background:#166534;color:#fff">
-          <th style="padding:8px 5px;width:36px">順序</th><th style="text-align:left;padding:8px 5px">施工路段</th>
-          <th style="padding:8px 5px;width:68px">面積(m²)</th><th style="padding:8px 5px;width:62px">厚度(cm)</th>
-          <th style="padding:8px 5px;width:68px">噸數(T)</th>
-        </tr></thead>
-        <tbody>
-          ${(rec.afterRows||[]).map((row,i)=>{
-            const a=+row.area||0,t=row.thickness||'';
-            const tons=a&&t?calcTons(a,t).toFixed(2):'—';
-            return `<tr style="font-size:13px;background:${i%2===0?'#fff':'#f8fafc'}">
-              <td style="text-align:center;padding:7px 5px">${i+1}</td>
-              <td style="padding:7px 5px">${eh(row.segment||'')}</td>
-              <td style="text-align:center;padding:7px 5px">${a||'—'}</td>
-              <td style="text-align:center;padding:7px 5px">${t||'—'}</td>
-              <td style="text-align:center;padding:7px 5px">${tons}</td>
-            </tr>`;
-          }).join('')}
-          <tr style="background:#f0fdf4;font-weight:700;color:#166534">
-            <td colspan="2" style="text-align:right;padding:8px 10px">合計</td>
-            <td style="text-align:center;padding:8px 5px">${n(recAfterTot(rec,'area'),1)}</td>
-            <td></td>
-            <td style="text-align:center;padding:8px 5px">${n(recAfterTot(rec,'tons'))}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-    <div style="margin-top:12px;border:1.5px solid #1e3a6e;border-radius:8px;overflow:hidden">
-      <div style="background:#1e3a6e;color:#fff;font-size:14px;font-weight:700;padding:7px 12px">📊 施工前後差異</div>
-      <table style="width:100%;border-collapse:collapse;font-size:13px">
-        <thead><tr style="background:#f1f5f9">
-          <th style="text-align:left;padding:8px 10px">項目</th>
-          <th style="text-align:center;padding:8px 6px">施工前</th>
-          <th style="text-align:center;padding:8px 6px">施工後</th>
-          <th style="text-align:center;padding:8px 6px">差異</th>
-        </tr></thead>
-        <tbody>${(()=>{
-          const ba=recAfterTot(rec,'area'),bt=recAfterTot(rec,'tons');
-          const da=+(ba-ta).toFixed(1),dt=+(bt-tt).toFixed(2);
-          const fmt=(v,d)=>v===0?'—':(v>0?'+':'')+v.toFixed(d);
-          const col=(v)=>v>0?'#16a34a':v<0?'#dc2626':'#64748b';
-          return `<tr><td style="padding:8px 10px;font-weight:600">面積 (m²)</td>
-            <td style="text-align:center;font-weight:700">${n(ta,1)}</td>
-            <td style="text-align:center;font-weight:700;color:#16a34a">${n(ba,1)}</td>
-            <td style="text-align:center;font-weight:800;color:${col(da)}">${fmt(da,1)}</td></tr>
-          <tr style="background:#f8fafc"><td style="padding:8px 10px;font-weight:600">噸數 (T)</td>
-            <td style="text-align:center;font-weight:700">${n(tt)}</td>
-            <td style="text-align:center;font-weight:700;color:#16a34a">${n(bt)}</td>
-            <td style="text-align:center;font-weight:800;color:${col(dt)}">${fmt(dt,2)}</td></tr>`;
-        })()}</tbody>
-      </table>
-    </div>` : '';
-
-  document.getElementById('previewContent').innerHTML = `
-  <div style="font-family:'Microsoft YaHei','PingFang TC',sans-serif;color:#1e293b;font-size:13px">
-    <div style="border-bottom:3px solid #1e3a6e;padding-bottom:10px;margin-bottom:12px">
-      <div style="font-size:18px;font-weight:900;color:#1e3a6e">${eh(buildCaseNo(rec))} 施工面積記錄</div>
-      <div style="font-size:14px;font-weight:700;color:#334155;margin-top:3px">${eh(rec.zone||'')}${rec.material?'　料別：'+eh(rec.material):''}</div>
-    </div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);border:1.5px solid #cbd5e1;border-radius:8px;overflow:hidden;margin-bottom:12px">
-      ${[['日期',rec.date],['星期',rec.weekday],['日/夜',rec.shift],['前置',rec.prepare],['刨除',rec.milling],['鋪設',rec.paving]].map(([l,v],i)=>`
-      <div style="padding:8px 11px;border-right:${i%3===2?'none':'1px solid #cbd5e1'};border-bottom:${i>=3?'none':'1px solid #cbd5e1'}">
-        <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:#94a3b8;margin-bottom:2px">${l}</div>
-        <div style="font-size:13px;font-weight:700">${eh(v||'—')}</div>
-      </div>`).join('')}
-    </div>
-    <div style="font-size:13px;font-weight:700;color:#d97706;background:#fffbeb;border-left:4px solid #d97706;padding:5px 9px;border-radius:4px;margin-bottom:7px">📊 施工前明細</div>
-    <table style="width:100%;border-collapse:collapse">
-      <thead><tr style="background:#1e3a6e;color:#fff">
-        <th style="padding:8px 5px;font-size:11px;width:36px">順序</th>
-        <th style="padding:8px 5px;font-size:11px;text-align:left">施工路段</th>
-        <th style="padding:8px 5px;font-size:11px;width:64px">面積(m²)</th>
-        <th style="padding:8px 5px;font-size:11px;width:58px">厚度(cm)</th>
-        <th style="padding:8px 5px;font-size:11px;width:64px">噸數(T)</th>
-        <th style="padding:8px 5px;font-size:11px;width:68px">刨除(-0.5)</th>
-      </tr></thead>
-      <tbody>${rowsHtml}
-        <tr style="background:#eff6ff;font-weight:700;color:#1e40af;font-size:13px">
-          <td colspan="2" style="text-align:right;padding:8px 9px">合　計</td>
-          <td style="text-align:center;padding:8px 5px">${n(ta,1)}</td>
-          <td></td>
-          <td style="text-align:center;padding:8px 5px">${n(tt)}</td>
-          <td style="text-align:center;padding:8px 5px">${n(tm)}</td>
-        </tr>
-      </tbody>
-    </table>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px">
-      <div style="border:2px solid #1e3a6e;border-radius:7px;padding:10px;text-align:center;background:#f0f4ff">
-        <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:3px">總面積</div>
-        <div style="font-size:22px;font-weight:900;color:#1e3a6e">${n(ta,1)}<span style="font-size:12px;color:#94a3b8"> m²</span></div>
-      </div>
-      <div style="border:2px solid #1e3a6e;border-radius:7px;padding:10px;text-align:center;background:#f0f4ff">
-        <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:3px">總噸數</div>
-        <div style="font-size:22px;font-weight:900;color:#1e3a6e">${n(tt)}<span style="font-size:12px;color:#94a3b8"> T</span></div>
-      </div>
-    </div>
-    ${afterHtml}
-  </div>`;
-  document.getElementById('previewMo').classList.add('open');
-}
-
-function closePreview() {
-  document.getElementById('previewMo').classList.remove('open');
-  _previewId = null;
-}
-
-function doPrint() {
-  if (_previewId !== null) {
-    closePreview();
-    setTimeout(() => printRec(_previewId), 100);
-  }
-}
-
-// ══════════════════════════════════════════
-//  PRINT
-// ══════════════════════════════════════════
-function printRec(id) {
-  const rec = gr(id); if (!rec) return;
-  const ta = recTot(rec,'area'), tt = recTot(rec,'tons'), tm = recTot(rec,'mill');
-  const rows = rec.rows;
-
-  const rowsHtml = rows.map((row, i) => {
-    const a = +row.area||0, t = row.thickness||'';
-    const tons = a&&t ? calcTons(a,t).toFixed(2) : '—';
-    const mill = a&&t ? calcMill(a,t).toFixed(2) : '—';
-    return `<tr style="font-size:16px">
-      <td style="text-align:center">${i+1}</td>
-      <td>${eh(row.segment||'')}</td>
-      <td style="text-align:center">${a||'—'}</td>
-      <td style="text-align:center">${t||'—'}</td>
-      <td style="text-align:center">${tons}</td>
-      <td style="text-align:center">${mill}</td>
-    </tr>`;
-  }).join('');
-
-  const html = `
-  <style>
-    @page { size: A4 portrait; margin: 14mm; }
-    @page :first { margin-top: 14mm; }
-    html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Microsoft YaHei','PingFang TC','Noto Sans TC',sans-serif; background:#fff; color:#1e293b; }
-    .p-wrap { padding: 0; }
-    /* Header */
-    .p-header { display:flex; align-items:center; justify-content:space-between; border-bottom:3px solid #1e3a6e; padding-bottom:10px; margin-bottom:14px; }
-    .p-title { font-size:30px; font-weight:900; color:#1e3a6e; letter-spacing:1px; }
-    .p-subtitle { font-size:20px; font-weight:700; color:#334155; margin-top:5px; letter-spacing:.5px; }
-    .p-logo { font-size:28px; }
-    /* Info grid */
-    .p-info { display:grid; grid-template-columns:1fr 1fr 1fr; gap:0; border:1.5px solid #cbd5e1; border-radius:8px; overflow:hidden; margin-bottom:16px; }
-    .p-info-item { padding:9px 13px; border-right:1px solid #cbd5e1; border-bottom:1px solid #cbd5e1; }
-    .p-info-item:nth-child(3n) { border-right:none; }
-    .p-info-item:nth-last-child(-n+3) { border-bottom:none; }
-    .p-info-label { font-size:13px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#94a3b8; margin-bottom:3px; }
-    .p-info-val { font-size:20px; font-weight:700; color:#1e293b; }
-    /* Table */
-    .p-tbl-title { font-size:18px; font-weight:700; color:#d97706; background:#fffbeb; border-left:4px solid #d97706; padding:6px 11px; border-radius:4px; margin-bottom:9px; }
-    table { width:100%; border-collapse:collapse; }
-    thead tr { background:#1e3a6e; color:#fff; }
-    thead th { padding:11px 8px; text-align:center; font-weight:700; font-size:17px; letter-spacing:.5px; }
-    thead th:nth-child(2) { text-align:left; }
-    tbody tr:nth-child(odd) { background:#f8fafc; }
-    tbody tr:nth-child(even) { background:#fff; }
-    tbody td { padding:12px 8px; border-bottom:1px solid #e2e8f0; font-size:18px; }
-    tbody td:nth-child(2) { text-align:left; }
-    .sub-row { background:#eff6ff !important; font-weight:700; color:#1e40af; }
-    .sub-row td { border-top:2px solid #bfdbfe; border-bottom:2px solid #bfdbfe; padding:12px 8px; font-size:18px; }
-    /* Summary */
-    .p-summary { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:16px; }
-    .p-sum-box { border:2px solid #e2e8f0; border-radius:8px; padding:14px 16px; text-align:center; }
-    .p-sum-box.highlight { border-color:#1e3a6e; background:#f0f4ff; }
-    .p-sum-label { font-size:15px; font-weight:700; color:#64748b; letter-spacing:1px; text-transform:uppercase; margin-bottom:5px; }
-    .p-sum-val { font-size:36px; font-weight:900; color:#1e3a6e; }
-    .p-sum-unit { font-size:18px; color:#94a3b8; margin-left:2px; }
-    /* Footer */
-    .p-footer { display:none; }
-  </style>
-  <div class="p-wrap">
-    <div class="p-header">
-      <div>
-        <div class="p-title">🏗️ ${eh(buildCaseNo(rec))} 施工面積記錄</div>
-        <div class="p-subtitle">${eh(rec.zone||'')}${rec.material ? '　　料別：' + eh(rec.material) : ''}</div>
-      </div>
-      <div class="p-logo">📋</div>
-    </div>
-
-    <div class="p-info">
-      <div class="p-info-item">
-        <div class="p-info-label">日期</div>
-        <div class="p-info-val">${eh(rec.date||'—')}</div>
-      </div>
-      <div class="p-info-item">
-        <div class="p-info-label">星期</div>
-        <div class="p-info-val">${eh(rec.weekday||'—')}</div>
-      </div>
-      <div class="p-info-item">
-        <div class="p-info-label">日 / 夜</div>
-        <div class="p-info-val">${eh(rec.shift||'—')}</div>
-      </div>
-      <div class="p-info-item">
-        <div class="p-info-label">前置作業</div>
-        <div class="p-info-val">${eh(rec.prepare||'—')}</div>
-      </div>
-      <div class="p-info-item">
-        <div class="p-info-label">刨除時間</div>
-        <div class="p-info-val">${eh(rec.milling||'—')}</div>
-      </div>
-      <div class="p-info-item">
-        <div class="p-info-label">鋪設時間</div>
-        <div class="p-info-val">${eh(rec.paving||'—')}</div>
-      </div>
-    </div>
-
-    <div class="p-tbl-title">📊 施工路段明細</div>
-    <table>
-      <thead>
-        <tr>
-          <th style="width:44px">順序</th>
-          <th>施工路段</th>
-          <th style="width:76px">面積(m²)</th>
-          <th style="width:70px">厚度(cm)</th>
-          <th style="width:76px">噸數(T)</th>
-          <th style="width:80px">刨除(-0.5)</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${rowsHtml}
-        <tr class="sub-row">
-          <td colspan="2" style="text-align:right;padding-right:12px;font-size:13px;letter-spacing:.5px">合　計</td>
-          <td style="text-align:center">${n(ta,1)}</td>
-          <td></td>
-          <td style="text-align:center">${n(tt)}</td>
-          <td style="text-align:center">${n(tm)}</td>
-        </tr>
-      </tbody>
-    </table>
-
-    <div class="p-summary">
-      <div class="p-sum-box highlight">
-        <div class="p-sum-label">總面積</div>
-        <div><span class="p-sum-val">${n(ta,1)}</span><span class="p-sum-unit">m²</span></div>
-      </div>
-      <div class="p-sum-box highlight">
-        <div class="p-sum-label">總噸數</div>
-        <div><span class="p-sum-val">${n(tt)}</span><span class="p-sum-unit">T</span></div>
-      </div>
-    </div>
-
-    ${(rec.afterRows&&rec.afterRows.length) ? `
-    <div style="margin-top:20px">
-      <div style="font-size:18px;font-weight:700;color:#16a34a;background:#f0fdf4;border-left:4px solid #16a34a;padding:6px 11px;border-radius:4px;margin-bottom:9px">✅ 施工後明細</div>
-      <table>
-        <thead><tr style="background:#166534">
-          <th style="width:44px">順序</th><th>施工路段</th>
-          <th style="width:76px">面積(m²)</th><th style="width:70px">厚度(cm)</th>
-          <th style="width:76px">噸數(T)</th>
-        </tr></thead>
-        <tbody>
-          ${(rec.afterRows||[]).map((row,i)=>{
-            const a=+row.area||0,t=row.thickness||'';
-            const tons=a&&t?calcTons(a,t).toFixed(2):'—';
-            return '<tr style="font-size:16px"><td style="text-align:center">'+(i+1)+'</td><td>'+eh(row.segment||'')+'</td><td style="text-align:center">'+(a||'—')+'</td><td style="text-align:center">'+(t||'—')+'</td><td style="text-align:center">'+tons+'</td></tr>';
-          }).join('')}
-          <tr style="background:#f0fdf4;font-weight:700;color:#166534;font-size:16px">
-            <td colspan="2" style="text-align:right;padding-right:12px">合　計</td>
-            <td style="text-align:center">${n(recAfterTot(rec,'area'),1)}</td>
-            <td></td>
-            <td style="text-align:center">${n(recAfterTot(rec,'tons'))}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-    <div style="margin-top:16px;border:2px solid #1e3a6e;border-radius:9px;overflow:hidden">
-      <div style="background:#1e3a6e;color:#fff;font-size:16px;font-weight:700;padding:8px 14px">📊 施工前後差異</div>
-      <table style="font-size:16px">
-        <thead><tr style="background:#f1f5f9"><th style="text-align:left;padding:9px 12px">項目</th><th>施工前</th><th>施工後</th><th>差異</th></tr></thead>
-        <tbody>${(()=>{
-          const ba=recAfterTot(rec,'area'),bt=recAfterTot(rec,'tons');
-          const da=+(ba-ta).toFixed(1),dt=+(bt-tt).toFixed(2);
-          const fmt=(v,d)=>v===0?'—':(v>0?'+':'')+v.toFixed(d);
-          const col=(v)=>v>0?'#16a34a':v<0?'#dc2626':'#64748b';
-          return '<tr><td style="padding:9px 12px;font-weight:600">面積 (m²)</td><td style="text-align:center;font-weight:700">'+n(ta,1)+'</td><td style="text-align:center;font-weight:700;color:#16a34a">'+n(ba,1)+'</td><td style="text-align:center;font-weight:800;color:'+col(da)+'">'+fmt(da,1)+'</td></tr><tr style="background:#f8fafc"><td style="padding:9px 12px;font-weight:600">噸數 (T)</td><td style="text-align:center;font-weight:700">'+n(tt,2)+'</td><td style="text-align:center;font-weight:700;color:#16a34a">'+n(bt,2)+'</td><td style="text-align:center;font-weight:800;color:'+col(dt)+'">'+fmt(dt,2)+'</td></tr>';
-        })()}</tbody>
-      </table>
-    </div>
-    ` : ''}
-
-    <div class="p-footer">
-      <span>列印時間：${new Date().toLocaleString('zh-TW')}</span>
-      <span>${eh(buildCaseNo(rec))} — ${eh(rec.zone||'')}</span>
-    </div>
-  </div>`;
-
-  const pa = document.getElementById('print-area');
-  pa.innerHTML = html;
-  pa.style.display = 'block';
-  window.print();
-  pa.style.display = 'none';
-}
-
-
-// ══════════════════════════════════════════
-//  BATCH PRINT
-// ══════════════════════════════════════════
-let batchMode    = false;
-let batchSelected = new Set();
-
-function enterBatchMode() {
-  batchMode = true;
-  batchSelected.clear();
-  document.getElementById('batchBar').classList.add('show');
-  document.getElementById('batchCount').textContent = '已選 0 筆';
-  // show all checkboxes
-  document.querySelectorAll('.card-check').forEach(el => el.classList.add('show'));
-  // disable card toggle when in batch mode — handled in toggleBatchSelect
-  showToast('點選卡片勾選，再按列印', '');
-}
-
-function exitBatchMode() {
-  batchMode = false;
-  batchSelected.clear();
-  document.getElementById('batchBar').classList.remove('show');
-  document.querySelectorAll('.card-check').forEach(el => {
-    el.classList.remove('show','checked');
-  });
-}
-
-function toggleBatchSelect(id, el) {
-  if (!batchMode) return;
-  if (batchSelected.has(id)) {
-    batchSelected.delete(id);
-    el.classList.remove('checked');
-  } else {
-    batchSelected.add(id);
-    el.classList.add('checked');
-  }
-  document.getElementById('batchCount').textContent = `已選 ${batchSelected.size} 筆`;
-}
-
-function selectAllBatch() {
-  const filtered = getSorted(getFiltered());
-  filtered.forEach(rec => {
-    batchSelected.add(rec.id);
-    const el = document.getElementById(`chk-${rec.id}`);
-    if (el) el.classList.add('checked');
-  });
-  document.getElementById('batchCount').textContent = `已選 ${batchSelected.size} 筆`;
-}
-
-function buildRecHtml(rec) {
-  const ta = recTot(rec,'area'), tt = recTot(rec,'tons'), tm = recTot(rec,'mill');
-  const rowsHtml = rec.rows.map((row,i) => {
-    const a=+row.area||0, t=row.thickness||'';
-    const tons=a&&t?calcTons(a,t).toFixed(2):'—';
-    const mill=a&&t?calcMill(a,t).toFixed(2):'—';
-    return `<tr>
-      <td style="text-align:center">${i+1}</td>
-      <td>${eh(row.segment||'')}</td>
-      <td style="text-align:center">${a||'—'}</td>
-      <td style="text-align:center">${t||'—'}</td>
-      <td style="text-align:center">${tons}</td>
-      <td style="text-align:center">${mill}</td>
-    </tr>`;
-  }).join('');
-
-  return `
-  <div class="p-wrap">
-    <div class="p-header">
-      <div>
-        <div class="p-title">🏗️ ${eh(buildCaseNo(rec))} 施工面積記錄</div>
-        <div class="p-subtitle">${eh(rec.zone||'')}${rec.material?'　　料別：'+eh(rec.material):''}</div>
-      </div>
-      <div class="p-logo">📋</div>
-    </div>
-    <div class="p-info">
-      <div class="p-info-item"><div class="p-info-label">日期</div><div class="p-info-val">${eh(rec.date||'—')}</div></div>
-      <div class="p-info-item"><div class="p-info-label">星期</div><div class="p-info-val">${eh(rec.weekday||'—')}</div></div>
-      <div class="p-info-item"><div class="p-info-label">日 / 夜</div><div class="p-info-val">${eh(rec.shift||'—')}</div></div>
-      <div class="p-info-item"><div class="p-info-label">前置作業</div><div class="p-info-val">${eh(rec.prepare||'—')}</div></div>
-      <div class="p-info-item"><div class="p-info-label">刨除時間</div><div class="p-info-val">${eh(rec.milling||'—')}</div></div>
-      <div class="p-info-item"><div class="p-info-label">鋪設時間</div><div class="p-info-val">${eh(rec.paving||'—')}</div></div>
-    </div>
-    <div class="p-tbl-title">📊 施工路段明細</div>
-    <table>
-      <thead><tr>
-        <th style="width:44px">順序</th><th>施工路段</th>
-        <th style="width:76px">面積(m²)</th><th style="width:70px">厚度(cm)</th>
-        <th style="width:76px">噸數(T)</th><th style="width:80px">刨除(-0.5)</th>
-      </tr></thead>
-      <tbody>${rowsHtml}
-        <tr class="sub-row">
-          <td colspan="2" style="text-align:right;padding-right:12px;font-size:13px;letter-spacing:.5px">合　計</td>
-          <td style="text-align:center">${n(ta,1)}</td><td></td>
-          <td style="text-align:center">${n(tt)}</td>
-          <td style="text-align:center">${n(tm)}</td>
-        </tr>
-      </tbody>
-    </table>
-    <div class="p-summary">
-      <div class="p-sum-box highlight"><div class="p-sum-label">總面積</div>
-        <div><span class="p-sum-val">${n(ta,1)}</span><span class="p-sum-unit">m²</span></div></div>
-      <div class="p-sum-box highlight"><div class="p-sum-label">總噸數</div>
-        <div><span class="p-sum-val">${n(tt)}</span><span class="p-sum-unit">T</span></div></div>
-    </div>
-  </div>`;
-}
-
-function doBatchPrint() {
-  if (batchSelected.size === 0) { showToast('請先勾選要列印的記錄', 'error'); return; }
-  const selectedRecs = records.filter(r => batchSelected.has(r.id));
-  // sort by date
-  selectedRecs.sort((a,b) => {
-    const da=parseDate(a.date), db=parseDate(b.date);
-    return (da?da.getTime():0) - (db?db.getTime():0);
-  });
-
-  // build combined print HTML — each record on its own page
-  const recPages = selectedRecs.map((rec,i) =>
-    `<div style="${i>0?'page-break-before:always;':''}padding:0">${buildRecHtml(rec)}</div>`
-  ).join('');
-
-  const pa = document.getElementById('print-area');
-  pa.innerHTML = `
-  <style>
-    @page { size: A4 portrait; margin: 14mm; }
-    @page :first { margin-top: 14mm; }
-    html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Microsoft YaHei','PingFang TC','Noto Sans TC',sans-serif; background:#fff; color:#1e293b; }
-    .p-wrap { padding: 0; }
-    .p-header { display:flex; align-items:center; justify-content:space-between; border-bottom:3px solid #1e3a6e; padding-bottom:10px; margin-bottom:14px; }
-    .p-title { font-size:30px; font-weight:900; color:#1e3a6e; letter-spacing:1px; }
-    .p-subtitle { font-size:20px; font-weight:700; color:#334155; margin-top:5px; }
-    .p-logo { font-size:28px; }
-    .p-info { display:grid; grid-template-columns:1fr 1fr 1fr; gap:0; border:1.5px solid #cbd5e1; border-radius:8px; overflow:hidden; margin-bottom:16px; }
-    .p-info-item { padding:9px 13px; border-right:1px solid #cbd5e1; border-bottom:1px solid #cbd5e1; }
-    .p-info-item:nth-child(3n) { border-right:none; }
-    .p-info-item:nth-last-child(-n+3) { border-bottom:none; }
-    .p-info-label { font-size:13px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#94a3b8; margin-bottom:3px; }
-    .p-info-val { font-size:20px; font-weight:700; color:#1e293b; }
-    .p-tbl-title { font-size:18px; font-weight:700; color:#d97706; background:#fffbeb; border-left:4px solid #d97706; padding:6px 11px; border-radius:4px; margin-bottom:9px; }
-    table { width:100%; border-collapse:collapse; }
-    thead tr { background:#1e3a6e; color:#fff; }
-    thead th { padding:11px 8px; text-align:center; font-weight:700; font-size:17px; letter-spacing:.5px; }
-    thead th:nth-child(2) { text-align:left; }
-    tbody tr:nth-child(odd) { background:#f8fafc; }
-    tbody tr:nth-child(even) { background:#fff; }
-    tbody td { padding:12px 8px; border-bottom:1px solid #e2e8f0; font-size:18px; }
-    tbody td:nth-child(2) { text-align:left; }
-    .sub-row { background:#eff6ff !important; font-weight:700; color:#1e40af; }
-    .sub-row td { border-top:2px solid #bfdbfe; border-bottom:2px solid #bfdbfe; padding:12px 8px; font-size:18px; }
-    .p-summary { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:16px; }
-    .p-sum-box { border:2px solid #e2e8f0; border-radius:8px; padding:14px 16px; text-align:center; }
-    .p-sum-box.highlight { border-color:#1e3a6e; background:#f0f4ff; }
-    .p-sum-label { font-size:15px; font-weight:700; color:#64748b; letter-spacing:1px; text-transform:uppercase; margin-bottom:5px; }
-    .p-sum-val { font-size:36px; font-weight:900; color:#1e3a6e; }
-    .p-sum-unit { font-size:18px; color:#94a3b8; margin-left:2px; }
-    .p-footer { display:none; }
-  </style>
-  ${recPages}`;
-
-  pa.style.display = 'block';
-  window.print();
-  pa.style.display = 'none';
-  exitBatchMode();
-  showToast(`已列印 ${selectedRecs.length} 筆記錄 🖨️`, 'success');
-}
-
-
-// ══════════════════════════════════════════
-//  AFTER-WORK ROWS
-// ══════════════════════════════════════════
-function recAfterTot(rec, what) {
-  if (!rec.afterRows || !rec.afterRows.length) return 0;
-  return rec.afterRows.reduce((s, r) => {
-    const a = +r.area||0, t = r.thickness||'0';
-    if (what==='area') return s+a;
-    if (what==='tons') return s+calcTons(a,t);
-    return s;
-  }, 0);
-}
-
-function renderAfterRow(rec, row, idx) {
-  const a = +row.area||0, t = row.thickness||'';
-  const tons = a&&t ? calcTons(a,t).toFixed(2) : '';
-  return `<tr id="atr-${rec.id}-${row.id}">
-    <td><div class="cr" style="color:#16a34a">${idx+1}</div></td>
-    <td><input class="ci seg" value="${ea(row.segment||'')}" oninput="uAfterRF(${rec.id},${row.id},'segment',this.value)" placeholder="路段名稱"></td>
-    <td><input class="ci" type="number" step="0.1" value="${a||''}" oninput="uAfterArea(${rec.id},${row.id},this)" placeholder="0"></td>
-    <td><input class="ci" type="number" step="0.5" value="${ea(t)}" oninput="uAfterThick(${rec.id},${row.id},this.value)" placeholder="cm"></td>
-    <td><div class="cr" style="color:#16a34a" id="atons-${rec.id}-${row.id}">${tons}</div></td>
-    <td><button class="del-row-btn" onclick="delAfterRow(${rec.id},${row.id})">×</button></td>
-  </tr>`;
-}
-
-function addAfterRow(recId) {
-  const rec = gr(recId); if (!rec) return;
-  if (!rec.afterRows) rec.afterRows = [];
-  const nid = Date.now();
-  // default thickness from first before-row
-  const defaultThick = rec.rows[0]?.thickness || '';
-  rec.afterRows.push({ id:nid, segment:'', area:0, thickness:defaultThick });
-  const tbody = document.getElementById(`atb-${recId}`);
-  if (tbody) {
-    const tr = document.createElement('tr');
-    tr.id = `atr-${recId}-${nid}`;
-    tr.innerHTML = renderAfterRow(rec, rec.afterRows[rec.afterRows.length-1], rec.afterRows.length-1)
-      .replace(/^<tr[^>]*>|<\/tr>$/g,'');
-    tbody.appendChild(tr);
-    reindexAfter(recId);
-  }
-  updAfterTots(recId);
-  persistRecord(rec);
-}
-
-function delAfterRow(recId, rowId) {
-  const rec = gr(recId); if (!rec) return;
-  rec.afterRows = (rec.afterRows||[]).filter(r => r.id !== rowId);
-  const el = document.getElementById(`atr-${recId}-${rowId}`);
-  if (el) el.remove();
-  reindexAfter(recId);
-  updAfterTots(recId);
-  persistRecord(rec);
-}
-
-function reindexAfter(recId) {
-  const tbody = document.getElementById(`atb-${recId}`); if (!tbody) return;
-  tbody.querySelectorAll('tr').forEach((tr,i) => {
-    const c = tr.querySelector('td:first-child .cr'); if (c) c.textContent = i+1;
-  });
-}
-
-function uAfterRF(recId, rowId, field, val) {
-  const rec=gr(recId); if(!rec) return;
-  const row=(rec.afterRows||[]).find(r=>r.id===rowId); if(!row) return;
-  row[field]=val; persistRecord(rec);
-}
-
-function uAfterArea(recId, rowId, input) {
-  const rec=gr(recId); if(!rec) return;
-  const row=(rec.afterRows||[]).find(r=>r.id===rowId); if(!row) return;
-  row.area = parseFloat(input.value)||0;
-  refreshAfterRow(recId, rowId, row);
-  updAfterTots(recId);
-  persistRecord(rec);
-}
-
-function uAfterThick(recId, rowId, val) {
-  const rec=gr(recId); if(!rec) return;
-  const row=(rec.afterRows||[]).find(r=>r.id===rowId); if(!row) return;
-  row.thickness = val;
-  refreshAfterRow(recId, rowId, row);
-  updAfterTots(recId);
-  persistRecord(rec);
-}
-
-function refreshAfterRow(recId, rowId, row) {
-  const a=+row.area||0, t=row.thickness||'';
-  const el = document.getElementById(`atons-${recId}-${rowId}`);
-  if (el) el.textContent = a&&t ? calcTons(a,t).toFixed(2) : '';
-}
-
-function updAfterTots(recId) {
-  const rec = gr(recId); if (!rec) return;
-  const ba = recAfterTot(rec,'area'), bt = recAfterTot(rec,'tons');
-  const g = id => document.getElementById(id);
-  if (g(`ata-${recId}`)) g(`ata-${recId}`).textContent = n(ba,1);
-  if (g(`att-${recId}`)) g(`att-${recId}`).textContent = n(bt);
-  // update or create collapsed summary after row
-  const cs = document.getElementById(`cs-${recId}`);
-  if (cs) {
-    let afterRow = document.getElementById(`csa-${recId}`) || cs.querySelector('.cs-after-row');
-    if (rec.afterRows && rec.afterRows.length > 0) {
-      if (!afterRow) {
-        afterRow = document.createElement('div');
-        afterRow.className = 'cs-after-row';
-        afterRow.id = `csa-${recId}`;
-        cs.appendChild(afterRow);
-      }
-      const ta2 = recTot(rec,'area'), tt2 = recTot(rec,'tons');
-      const da2 = +(ba-ta2).toFixed(1), dt2 = +(bt-tt2).toFixed(2);
-      const diffCol = v => v>0?'#16a34a':v<0?'#dc2626':'#64748b';
-      const diffFmt = (v,d) => v===0 ? '—' : (v>0?'+':'')+v.toFixed(d);
-      afterRow.innerHTML = `
-        <div class="cs-grid" style="margin-top:6px">
-          <div class="cs-cell after"><div class="cs-cell-label">面積（後）</div><span class="cs-cell-val">${n(ba,1)}</span><span class="cs-cell-unit"> m²</span></div>
-          <div class="cs-cell after"><div class="cs-cell-label">噸數（後）</div><span class="cs-cell-val">${n(bt)}</span><span class="cs-cell-unit"> T</span></div>
-          <div class="cs-cell" style="background:#f8fafc;border:1px solid #e2e8f0">
-            <div class="cs-cell-label" style="color:#64748b">差異</div>
-            <div style="font-size:15px;font-weight:700;white-space:nowrap"><span style="color:${diffCol(da2)}">${diffFmt(da2,1)}</span><span style="font-size:12px;color:#64748b"> m²</span> <span style="color:#cbd5e1;font-size:12px">·</span> <span style="color:${diffCol(dt2)}">${diffFmt(dt2,2)}</span><span style="font-size:12px;color:#64748b"> T</span></div>
-          </div>
-        </div>`;
-    } else if (afterRow) {
-      afterRow.remove();
-    }
-  }
-  // update diff box
-  updateDiffBox(recId);
-}
-
-function copyBeforeToAfter(recId) {
-  const rec = gr(recId); if (!rec) return;
-  if (rec.afterRows && rec.afterRows.length > 0) {
-    if (!confirm('施工後已有資料，確定要覆蓋並複製施工前路段嗎？')) return;
-  }
-  // Deep copy before rows, assign new IDs
-  rec.afterRows = rec.rows.map(r => ({
-    id: Date.now() + Math.random()*10000|0,
-    segment: r.segment || '',
-    area: r.area || 0,
-    thickness: r.thickness || ''
-  }));
-  persistRecord(rec);
-  // Re-render the after tbody
-  const tbody = document.getElementById(`atb-${recId}`);
-  if (tbody) {
-    tbody.innerHTML = rec.afterRows.map((r,i) => renderAfterRow(rec,r,i)
-      .replace(/^<tr[^>]*>|<\/tr>$/g,'')).join('');
-    // wrap each in tr
-    tbody.innerHTML = rec.afterRows.map((r,i) => renderAfterRow(rec,r,i)).join('');
-  }
-  updAfterTots(recId);
-  showToast('已複製施工前路段 ✓', 'success');
-}
-
-function updateDiffBox(recId) {
-  const rec = gr(recId); if (!rec) return;
-  const ta = recTot(rec,'area'), tt = recTot(rec,'tons');
-  const ba = recAfterTot(rec,'area'), bt = recAfterTot(rec,'tons');
-  const da = +(ba-ta).toFixed(1), dt = +(bt-tt).toFixed(2);
-  const fmtDiff = (v,d) => v===0 ? '—' : (v>0?'+':'')+v.toFixed(d);
-  const cls = v => v>0?'diff-pos':v<0?'diff-neg':'diff-zero';
-
-  // find container — it's the sibling after the after-table section
-  const bd = document.getElementById(`bd-${recId}`);
-  if (!bd) return;
-  let diffEl = document.getElementById(`diff-${recId}`);
-
-  if (!rec.afterRows || !rec.afterRows.length) {
-    if (diffEl) diffEl.remove();
-    return;
-  }
-
-  if (!diffEl) {
-    // Create and insert before print button
-    diffEl = document.createElement('div');
-    diffEl.id = `diff-${recId}`;
-    diffEl.className = 'diff-box';
-    const printBtn = bd.querySelector('.btn-print');
-    if (printBtn) bd.insertBefore(diffEl, printBtn);
-    else bd.appendChild(diffEl);
-  }
-
-  diffEl.innerHTML = `
-    <div class="diff-box-title">📊 施工前後差異</div>
-    <div class="diff-row header"><span>項目</span><span style="text-align:right">施工前</span><span style="text-align:right">施工後</span><span style="text-align:right">差異</span></div>
-    <div class="diff-row"><span>面積 (m²)</span><span class="diff-val">${n(ta,1)}</span><span class="diff-val" style="color:#16a34a">${n(ba,1)}</span><span class="diff-val ${cls(da)}">${fmtDiff(da,1)}</span></div>
-    <div class="diff-row"><span>噸數 (T)</span><span class="diff-val">${n(tt)}</span><span class="diff-val" style="color:#16a34a">${n(bt)}</span><span class="diff-val ${cls(dt)}">${fmtDiff(dt)}</span></div>`;
-}
-
-// ══════════════════════════════════════════
-//  UTILS
-// ══════════════════════════════════════════
-function today(){const d=new Date();return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;}
-function eh(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-function ea(s){return String(s||'').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
-
-let toastT;
-function showToast(msg,type=''){
-  const t=document.getElementById('toast');
-  t.textContent=msg;t.className=`toast show ${type}`;
-  clearTimeout(toastT);toastT=setTimeout(()=>t.className='toast',2500);
-}
-
-// Modal click-outside
-document.getElementById('previewMo').addEventListener('click',function(e){
-  if(e.target===this)closePreview();
-});
-['matMo','delMo','statsMo','locMo'].forEach(id=>{
-  document.getElementById(id).addEventListener('click',function(e){
-    if(e.target===this){if(this.id==='matMo')closeMatMo();else if(this.id==='delMo')closeDelMo();else if(this.id==='locMo')closeLocMo();else closeStatsMo();}
-  });
-});
-
-// ══════════════════════════════════════════
-//  INIT
-// ══════════════════════════════════════════
-loadLocal();
-render();
-window.addEventListener('scroll',()=>{
-  const btn=document.getElementById('toTop');
-  if(!btn) return;
-  if(window.scrollY>300) btn.classList.add('show');
-  else btn.classList.remove('show');
-},{passive:true});
-initFirebase().then(updateSyncUI).catch(()=>updateSyncUI());
-updateOfflineBanner();
-</script>
-</body>
-</html>
