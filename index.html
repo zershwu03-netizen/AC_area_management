@@ -2099,8 +2099,8 @@ function openPreview(id){
           <td style="text-align:center;padding:8px 5px">${n(ta,1)}</td>
           <td></td>
           <td style="text-align:center;padding:8px 5px">${n(tt)}</td>
-          <td style="text-align:center;padding:8px 5px">${n(tm)}</td>
-          <td style="text-align:center;padding:8px 5px;color:#1d4ed8">${signTotal>0?signTotal+'張':''}</td>
+          <td style="text-align:center;padding:8px 5px;color:#16a34a">${n(tm)}</td>
+          <td style="text-align:center;padding:8px 5px;color:#dc2626;font-weight:900">${signTotal>0?signTotal+'張':''}</td>
         </tr>
       </tbody>
     </table>
@@ -2178,7 +2178,7 @@ function printRec(id){
     </div>
     <div class="p-tbl-title">📊 施工前明細</div>
     <table><thead><tr><th style="width:44px">順序</th><th>施工路段</th><th style="width:72px">面積(m²)</th><th style="width:64px">厚度(cm)</th><th style="width:72px">噸數(T)</th><th style="width:72px">刨除(-0.5)</th><th style="width:56px">告示牌</th></tr></thead>
-    <tbody>${rowsHtml}<tr class="sub-row"><td colspan="2" style="text-align:right;padding-right:12px;font-size:13px;letter-spacing:.5px">合　計</td><td style="text-align:center">${n(ta,1)}</td><td></td><td style="text-align:center">${n(tt)}</td><td style="text-align:center">${n(tm)}</td><td style="text-align:center;color:#1d4ed8">${signTotal>0?signTotal+'張':''}</td></tr></tbody></table>
+    <tbody>${rowsHtml}<tr class="sub-row"><td colspan="2" style="text-align:right;padding-right:12px;font-size:13px;letter-spacing:.5px">合　計</td><td style="text-align:center">${n(ta,1)}</td><td></td><td style="text-align:center">${n(tt)}</td><td style="text-align:center;color:#16a34a">${n(tm)}</td><td style="text-align:center;color:#dc2626;font-weight:900">${signTotal>0?signTotal+'張':''}</td></tr></tbody></table>
     <div class="p-summary"><div class="p-sum-box highlight"><div class="p-sum-label">總面積</div><div><span class="p-sum-val">${n(ta,1)}</span><span class="p-sum-unit">m²</span></div></div><div class="p-sum-box highlight"><div class="p-sum-label">總噸數</div><div><span class="p-sum-val">${n(tt)}</span><span class="p-sum-unit">T</span></div></div></div>
     ${afterSection}
     <div class="p-footer"><span>列印時間：${new Date().toLocaleString('zh-TW')}</span><span>${eh(buildCaseNo(rec))} — ${eh(rec.zone||'')}</span></div>
