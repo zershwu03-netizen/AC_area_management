@@ -386,6 +386,32 @@ table.dt tbody tr:last-child td{border-bottom:none;}
   <div class="md-actions"><button class="btn btn-ghost" onclick="closeLocMo()">完成</button></div>
 </div></div>
 
+<!-- New Case Modal -->
+<div class="mo" id="newCaseMo"><div class="md" style="max-width:340px">
+  <h3>📋 新增派案</h3>
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <div class="fg">
+      <div class="fl">派案地點</div>
+      <div class="sw">
+        <select class="fs" id="newCaseLoc"></select>
+      </div>
+    </div>
+    <div class="fg">
+      <div class="fl">第幾派案</div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="font-size:14px;color:var(--text-dim)">第</span>
+        <input class="fi" id="newCaseNum" placeholder="八" style="text-align:center;flex:1"
+          onkeydown="if(event.key==='Enter')confirmNewCase()">
+        <span style="font-size:14px;color:var(--text-dim)">派案</span>
+      </div>
+    </div>
+  </div>
+  <div class="md-actions" style="margin-top:4px">
+    <button class="btn btn-ghost" onclick="closeNewCaseMo()">取消</button>
+    <button class="btn btn-success" onclick="confirmNewCase()">確認新增</button>
+  </div>
+</div></div>
+
 <!-- Delete Modal -->
 <div class="mo" id="delMo"><div class="md" style="max-width:300px">
   <h3>⚠️ 確認刪除</h3>
@@ -997,16 +1023,38 @@ function uAccept(id, val) {
 
 
 function addCase() {
+  openNewCaseMo();
+}
+
+function openNewCaseMo() {
+  // Populate location select
+  const sel = document.getElementById('newCaseLoc');
+  sel.innerHTML = locations.map(l=>`<option value="${ea(l)}">${eh(l)}</option>`).join('');
+  document.getElementById('newCaseNum').value = '';
+  document.getElementById('newCaseMo').classList.add('open');
+  setTimeout(()=>document.getElementById('newCaseNum').focus(), 100);
+}
+
+function closeNewCaseMo() {
+  document.getElementById('newCaseMo').classList.remove('open');
+}
+
+async function confirmNewCase() {
+  const loc = document.getElementById('newCaseLoc').value.trim();
+  const num = document.getElementById('newCaseNum').value.trim();
+  if (!loc) { showToast('請選擇派案地點','error'); return; }
+  if (!num) { showToast('請填寫第幾派案','error'); return; }
+  closeNewCaseMo();
   const cid = Date.now();
-  const c = { id:cid, caseLocation:locations[0]||'板橋', caseNum:'', preAcceptDate:'', mainAcceptDate:'' };
+  const c = { id:cid, caseLocation:loc, caseNum:num, preAcceptDate:'', mainAcceptDate:'', locked:true };
   cases.push(c);
-  persistCase(c);
+  await persistCase(c);
   render();
   setTimeout(()=>{
     const el = document.getElementById('cc-'+cid);
     if (el) el.scrollIntoView({behavior:'smooth',block:'start'});
-  }, 80);
-  showToast('已新增派案','success');
+  }, 120);
+  showToast(`已新增 ${loc}第${num}派案`, 'success');
 }
 
 function addRecordToCase(caseId) {
@@ -1875,9 +1923,9 @@ let toastT;
 function showToast(msg,type=''){const t=document.getElementById('toast');t.textContent=msg;t.className=`toast show ${type}`;clearTimeout(toastT);toastT=setTimeout(()=>t.className='toast',2500);}
 
 // Modal click-outside
-['matMo','delMo','statsMo','locMo'].forEach(id=>{
+['matMo','delMo','statsMo','locMo','newCaseMo'].forEach(id=>{
   document.getElementById(id).addEventListener('click',function(e){
-    if(e.target===this){if(this.id==='matMo')closeMatMo();else if(this.id==='delMo')closeDelMo();else if(this.id==='locMo')closeLocMo();else closeStatsMo();}
+    if(e.target===this){if(this.id==='matMo')closeMatMo();else if(this.id==='delMo')closeDelMo();else if(this.id==='locMo')closeLocMo();else if(this.id==='newCaseMo')closeNewCaseMo();else closeStatsMo();}
   });
 });
 document.getElementById('previewMo').addEventListener('click',e=>{if(e.target===e.currentTarget)closePreview();});
