@@ -532,7 +532,7 @@ function seedDemo() {
   cases = [{ id:cid, caseLocation:'板橋', caseNum:'八', preAcceptDate:'', mainAcceptDate:'' }];
   records = [{
     id:cid+1, caseId:cid,
-    date:'115/3/8', weekday:'六',
+    date:'115/03/08', weekday:'六',
     shift:'夜間', prepare:'21:30', milling:'22:00', paving:'23:00', zone:'重慶路245巷', material:'改三1"',
     rows:[
       {id:1,segment:'重慶路245巷至223巷',area:96,   thickness:'20', signs:''},
@@ -893,7 +893,7 @@ function renderCard(rec){
     </div>
     <div class="fg"><div class="fl">工區路段</div><input class="fi" value="${ea(rec.zone)}" oninput="uf(${rec.id},'zone',this.value)" placeholder="路段名稱"></div>
     <div class="info-grid-3">
-      <div class="fg"><div class="fl">日期</div><input class="fi" value="${ea(rec.date)}" oninput="uDate(${rec.id},this.value)" placeholder="115/3/8"></div>
+      <div class="fg"><div class="fl">日期</div><input class="fi" value="${ea(rec.date)}" oninput="uDate(${rec.id},this.value)" onblur="validateDate(this)" placeholder="115/04/08"></div>
       <div class="fg"><div class="fl">星期（自動）</div><input class="fi" id="wi-${rec.id}" value="${ea(rec.weekday)}" readonly></div>
       <div class="fg"><div class="fl">日 / 夜</div>
         <div class="shift-toggle">
@@ -903,9 +903,9 @@ function renderCard(rec){
       </div>
     </div>
     <div class="info-grid-3">
-      <div class="fg"><div class="fl">前置作業</div><input class="fi" type="text" inputmode="numeric" value="${rec.prepare||''}" placeholder="00:00" maxlength="5" oninput="fmtTime24(this);uf(${rec.id},'prepare',this.value)"></div>
-      <div class="fg"><div class="fl">刨除時間</div><input class="fi" type="text" inputmode="numeric" value="${rec.milling||''}" placeholder="00:00" maxlength="5" oninput="fmtTime24(this);uf(${rec.id},'milling',this.value)"></div>
-      <div class="fg"><div class="fl">鋪設時間</div><input class="fi" type="text" inputmode="numeric" value="${rec.paving||''}" placeholder="00:00" maxlength="5" oninput="fmtTime24(this);uf(${rec.id},'paving',this.value)"></div>
+      <div class="fg"><div class="fl">前置作業</div><input class="fi" type="text" inputmode="numeric" value="${rec.prepare||''}" placeholder="00:00" maxlength="5" oninput="fmtTime24(this);uf(${rec.id},'prepare',this.value)" onblur="validateTime(this)"></div>
+      <div class="fg"><div class="fl">刨除時間</div><input class="fi" type="text" inputmode="numeric" value="${rec.milling||''}" placeholder="00:00" maxlength="5" oninput="fmtTime24(this);uf(${rec.id},'milling',this.value)" onblur="validateTime(this)"></div>
+      <div class="fg"><div class="fl">鋪設時間</div><input class="fi" type="text" inputmode="numeric" value="${rec.paving||''}" placeholder="00:00" maxlength="5" oninput="fmtTime24(this);uf(${rec.id},'paving',this.value)" onblur="validateTime(this)"></div>
     </div>
     <div style="display:flex;gap:8px;align-items:flex-end">
       <div class="fg" style="flex:1"><div class="fl">料別</div><div class="sw"><select class="fs" id="ms-${rec.id}" onchange="uMat(${rec.id},this)">${matOpts(rec.material)}</select></div></div>
@@ -1007,12 +1007,13 @@ function renderRow(rec,row,idx){
   const a=+row.area||0, t=row.thickness||'';
   const tons=a&&t?calcTons(a,t).toFixed(2):'';
   const mill=a&&t?calcMill(a,t).toFixed(2):'';
-  return `<tr id="tr-${rec.id}-${row.id}" draggable="true"
-    ondragstart="rowDragStart(event,${rec.id},${row.id})"
-    ondragover="rowDragOver(event)"
-    ondrop="rowDrop(event,${rec.id},${row.id})"
-    ondragend="rowDragEnd(event)">
-    <td><div class="drag-handle" title="拖曳排序">⠿</div></td>
+  return `<tr id="tr-${rec.id}-${row.id}">
+    <td>
+      <div style="display:flex;flex-direction:column;gap:1px;align-items:center">
+        <button class="del-row-btn" style="font-size:10px;line-height:1" onclick="moveRow(${rec.id},${row.id},-1)" title="上移">▲</button>
+        <button class="del-row-btn" style="font-size:10px;line-height:1" onclick="moveRow(${rec.id},${row.id},1)" title="下移">▼</button>
+      </div>
+    </td>
     <td><div class="cr">${idx+1}</div></td>
     <td><input class="ci seg" value="${ea(row.segment||'')}" oninput="urf(${rec.id},${row.id},'segment',this.value)" placeholder="路段名稱"></td>
     <td><input class="ci" type="number" step="0.1" value="${a||''}" oninput="urA(${rec.id},${row.id},this)" placeholder="0"></td>
@@ -1083,13 +1084,24 @@ async function confirmNewCase() {
 function addRecordToCase(caseId) {
   const c = cases.find(x=>x.id===caseId); if (!c) return;
   const d = new Date(), nid = Date.now();
+  const y = d.getFullYear()-1911;
+  const mo = String(d.getMonth()+1).padStart(2,'0');
+  const dy = String(d.getDate()).padStart(2,'0');
+  // Carry settings from last record in this case
+  const caseRecs = getCaseRecords(caseId);
+  const last = caseRecs.length ? caseRecs[caseRecs.length-1] : null;
   const rec = {
     id:nid, caseId:caseId,
-    date:`${d.getFullYear()-1911}/${d.getMonth()+1}/${d.getDate()}`,
-    weekday:WEEKDAYS[d.getDay()], shift:'夜間',
-    prepare:'', milling:'', paving:'',
-    zone:'', material:materials[0]||'',
-    rows:[{id:nid+1,segment:'',area:0,thickness:'',signs:''}]
+    date:`${y}/${mo}/${dy}`,
+    weekday:WEEKDAYS[d.getDay()],
+    shift: last ? last.shift : '夜間',
+    prepare: last ? last.prepare : '',
+    milling: last ? last.milling : '',
+    paving:  last ? last.paving  : '',
+    zone:'',
+    material: last ? last.material : (materials[0]||''),
+    bento: '',
+    rows:[{id:nid+1,segment:'',area:0,thickness: last&&last.rows[0] ? last.rows[0].thickness : '',signs:''}]
   };
   records.push(rec);
   persistRecord(rec);
@@ -1121,6 +1133,8 @@ function uCase(caseId, field, val) {
   if (field==='caseLocation' && val==='__addloc__') {
     openLocMo(); const sel=document.querySelector(`#cc-${caseId} select`); if(sel)sel.value=c.caseLocation; return;
   }
+  // Normalize date fields
+  if (field==='preAcceptDate' || field==='mainAcceptDate') val = normDate(val) || val;
   c[field] = val;
   persistCase(c);
   // Update badge in header
@@ -1350,9 +1364,9 @@ function renderCaseBigCard(c) {
       <!-- Row 2: accept dates -->
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:nowrap">
         <span style="font-size:12px;color:#16a34a;font-weight:600;white-space:nowrap">初驗</span>
-        <input class="fi" style="width:110px;font-size:13px;padding:5px 7px" value="${ea(c.preAcceptDate||'')}" onblur="uCase(${c.id},'preAcceptDate',this.value)" placeholder="115/4/20">
+        <input class="fi" style="width:110px;font-size:13px;padding:5px 7px" value="${ea(c.preAcceptDate||'')}" onblur="uCase(${c.id},'preAcceptDate',this.value);validateDate(this)" placeholder="115/04/20">
         <span style="font-size:12px;color:#16a34a;font-weight:600;white-space:nowrap">正驗</span>
-        <input class="fi" style="width:110px;font-size:13px;padding:5px 7px" value="${ea(c.mainAcceptDate||'')}" onblur="uCase(${c.id},'mainAcceptDate',this.value)" placeholder="115/5/10">
+        <input class="fi" style="width:110px;font-size:13px;padding:5px 7px" value="${ea(c.mainAcceptDate||'')}" onblur="uCase(${c.id},'mainAcceptDate',this.value);validateDate(this)" placeholder="115/05/10">
       </div>
     </div>
 
@@ -1411,12 +1425,54 @@ function renderFiltered() {
 
 
 // ══════════════════════════════════════════
-//  TIME INPUT FORMATTER (24h XX:XX)
+//  TIME & DATE FORMATTERS / VALIDATORS
 // ══════════════════════════════════════════
 function fmtTime24(input) {
-  let v = input.value.replace(/[^0-9]/g,'');
-  if (v.length >= 3) v = v.slice(0,2) + ':' + v.slice(2,4);
+  let v = input.value.replace(/[^0-9:]/g,'');
+  // Auto-insert colon
+  const digits = v.replace(/:/g,'');
+  if (digits.length >= 3) v = digits.slice(0,2) + ':' + digits.slice(2,4);
+  else v = digits;
   input.value = v;
+  // Validate on blur (called separately)
+}
+
+function validateTime(input) {
+  const v = input.value.trim();
+  if (!v) return;
+  const m = v.match(/^(\d{1,2}):(\d{2})$/);
+  if (!m || +m[1]>23 || +m[2]>59) {
+    input.style.borderColor='#dc2626';
+    input.title='時間格式錯誤，請輸入 HH:MM（如 22:30）';
+  } else {
+    input.style.borderColor='';
+    input.title='';
+    // Pad hours
+    input.value = m[1].padStart(2,'0') + ':' + m[2];
+  }
+}
+
+// Normalize date to YYYY/MM/DD (民國 padded)
+function normDate(s) {
+  if (!s) return '';
+  const m = s.match(/^(\d{2,3})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
+  if (!m) return s;
+  return m[1] + '/' + m[2].padStart(2,'0') + '/' + m[3].padStart(2,'0');
+}
+
+function validateDate(input) {
+  const v = input.value.trim();
+  if (!v) return;
+  const normed = normDate(v);
+  const m = normed.match(/^(\d{2,3})\/(\d{2})\/(\d{2})$/);
+  if (!m) {
+    input.style.borderColor='#dc2626';
+    input.title='日期格式錯誤，請輸入 YYY/MM/DD（如 115/04/08）';
+  } else {
+    input.style.borderColor='';
+    input.title='';
+    input.value = normed;
+  }
 }
 
 
@@ -1456,44 +1512,20 @@ function toggleCaseCollapse(cid) {
 }
 
 // ══════════════════════════════════════════
-//  ROW DRAG TO REORDER
+//  ROW MOVE (UP/DOWN BUTTONS)
 // ══════════════════════════════════════════
-let _dragRecId=null, _dragRowId=null;
-
-function rowDragStart(e, recId, rowId) {
-  _dragRecId=recId; _dragRowId=rowId;
-  e.currentTarget.classList.add('dragging');
-  e.dataTransfer.effectAllowed='move';
-}
-function rowDragOver(e) {
-  e.preventDefault();
-  e.dataTransfer.dropEffect='move';
-  // Highlight target row
-  document.querySelectorAll('tr.drag-over').forEach(r=>r.classList.remove('drag-over'));
-  e.currentTarget.classList.add('drag-over');
-}
-function rowDrop(e, recId, targetRowId) {
-  e.preventDefault();
-  document.querySelectorAll('tr.drag-over').forEach(r=>r.classList.remove('drag-over'));
-  if (_dragRecId !== recId || _dragRowId === targetRowId) return;
+function moveRow(recId, rowId, dir) {
   const rec = gr(recId); if (!rec) return;
-  const fromIdx = rec.rows.findIndex(r=>r.id===_dragRowId);
-  const toIdx   = rec.rows.findIndex(r=>r.id===targetRowId);
-  if (fromIdx<0||toIdx<0) return;
-  // Reorder array
-  const [moved] = rec.rows.splice(fromIdx,1);
-  rec.rows.splice(toIdx,0,moved);
+  const idx = rec.rows.findIndex(r=>r.id===rowId);
+  const newIdx = idx + dir;
+  if (newIdx < 0 || newIdx >= rec.rows.length) return;
+  const [moved] = rec.rows.splice(idx, 1);
+  rec.rows.splice(newIdx, 0, moved);
   persistRecord(rec);
-  // Re-render just the tbody
   const tbody = document.getElementById(`tb-${recId}`);
   if (tbody) tbody.innerHTML = rec.rows.map((r,i)=>renderRow(rec,r,i)).join('');
   reindex(recId);
   updTots(recId);
-}
-function rowDragEnd(e) {
-  e.currentTarget.classList.remove('dragging');
-  document.querySelectorAll('tr.drag-over').forEach(r=>r.classList.remove('drag-over'));
-  _dragRecId=null; _dragRowId=null;
 }
 
 // ══════════════════════════════════════════
@@ -1693,10 +1725,13 @@ function uf(id, field, val) {
 
 function uDate(id, val) {
   const rec = gr(id); if (!rec) return;
-  rec.date = val; rec.weekday = weekday(val); persistRecord(rec);
-  const td=document.getElementById(`td-${id}`); if(td) td.textContent=val||'--';
+  const normed = normDate(val) || val;
+  rec.date = normed; rec.weekday = weekday(normed); persistRecord(rec);
+  const td=document.getElementById(`td-${id}`); if(td) td.textContent=normed||'--';
   const tw=document.getElementById(`tw-${id}`); if(tw) tw.textContent=rec.weekday;
   const wi=document.getElementById(`wi-${id}`); if(wi) wi.value=rec.weekday;
+  // Update input field
+  const di=document.querySelector(`#bd-${id} .fi[oninput*="uDate"]`); if(di) di.value=normed;
 }
 
 function uShift(id, val, btn) {
@@ -1911,9 +1946,10 @@ function selectAllBatch(){
 }
 function buildRecHtml(rec){
   const ta=recTot(rec,'area'),tt=recTot(rec,'tons'),tm=recTot(rec,'mill');
-  const rowsHtml=rec.rows.map((row,i)=>{const a=+row.area||0,t=row.thickness||'';const tons=a&&t?calcTons(a,t).toFixed(2):'—';const mill=a&&t?calcMill(a,t).toFixed(2):'—';
-    return '<tr><td style="text-align:center">'+(i+1)+'</td><td>'+eh(row.segment||'')+'</td><td style="text-align:center">'+(a||'—')+'</td><td style="text-align:center">'+(t||'—')+'</td><td style="text-align:center">'+tons+'</td><td style="text-align:center">'+mill+'</td></tr>';}).join('');
-  return `<div class="p-wrap"><div class="p-header"><div><div class="p-title">🏗️ ${eh(caseName)} 施工面積記錄</div><div class="p-subtitle">${eh(rec.zone||'')}${rec.material?'　料別：'+eh(rec.material):''}</div></div><div class="p-logo">📋</div></div>
+  const signTot=rec.rows.reduce((s,r)=>s+(+r.signs||0),0);
+  const rowsHtml=rec.rows.map((row,i)=>{const a=+row.area||0,t=row.thickness||'';const tons=a&&t?calcTons(a,t).toFixed(2):'—';const mill=a&&t?calcMill(a,t).toFixed(2):'—';const sg=+row.signs||0;
+    return '<tr><td style="text-align:center">'+(i+1)+'</td><td>'+eh(row.segment||'')+'</td><td style="text-align:center">'+(a||'—')+'</td><td style="text-align:center">'+(t||'—')+'</td><td style="text-align:center">'+tons+'</td><td style="text-align:center">'+mill+'</td><td style="text-align:center">'+(sg||'—')+'</td></tr>';}).join('');
+  return `<div class="p-wrap"><div class="p-header"><div><div class="p-title">🏗️ ${eh(caseName)} 施工面積記錄</div><div class="p-subtitle">${eh(rec.zone||'')}${rec.material?'　料別：'+eh(rec.material):''}${rec.bento?'　🍱 便當：'+eh(rec.bento):''}</div></div><div class="p-logo">📋</div></div>
     <div class="p-info"><div class="p-info-item"><div class="p-info-label">日期</div><div class="p-info-val">${eh(rec.date||'—')}</div></div><div class="p-info-item"><div class="p-info-label">星期</div><div class="p-info-val">${eh(rec.weekday||'—')}</div></div><div class="p-info-item"><div class="p-info-label">日/夜</div><div class="p-info-val">${eh(rec.shift||'—')}</div></div><div class="p-info-item"><div class="p-info-label">前置</div><div class="p-info-val">${eh(rec.prepare||'—')}</div></div><div class="p-info-item"><div class="p-info-label">刨除</div><div class="p-info-val">${eh(rec.milling||'—')}</div></div><div class="p-info-item"><div class="p-info-label">鋪設</div><div class="p-info-val">${eh(rec.paving||'—')}</div></div></div>
     <div class="p-tbl-title">📊 施工路段明細</div>
     <table><thead><tr><th style="width:44px">順序</th><th>施工路段</th><th style="width:72px">面積(m²)</th><th style="width:64px">厚度(cm)</th><th style="width:72px">噸數(T)</th><th style="width:72px">刨除(-0.5)</th><th style="width:56px">告示牌</th></tr></thead>
@@ -2100,7 +2136,7 @@ function printRec(id){
   const pa=document.getElementById('print-area');
   pa.innerHTML=`<style>@page{size:A4 portrait;margin:14mm;}@page :first{margin-top:14mm;}html{-webkit-print-color-adjust:exact;print-color-adjust:exact;}*{box-sizing:border-box;margin:0;padding:0;}body{font-family:'Microsoft YaHei','PingFang TC','Noto Sans TC',sans-serif;background:#fff;color:#1e293b;}.p-wrap{padding:0;}.p-header{display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #1e3a6e;padding-bottom:10px;margin-bottom:14px;}.p-title{font-size:30px;font-weight:900;color:#1e3a6e;letter-spacing:1px;}.p-subtitle{font-size:20px;font-weight:700;color:#334155;margin-top:5px;letter-spacing:.5px;}.p-logo{font-size:28px;}.p-info{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;border:1.5px solid #cbd5e1;border-radius:8px;overflow:hidden;margin-bottom:16px;}.p-info-item{padding:9px 13px;border-right:1px solid #cbd5e1;border-bottom:1px solid #cbd5e1;}.p-info-item:nth-child(3n){border-right:none;}.p-info-item:nth-last-child(-n+3){border-bottom:none;}.p-info-label{font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#94a3b8;margin-bottom:3px;}.p-info-val{font-size:20px;font-weight:700;color:#1e293b;}.p-tbl-title{font-size:18px;font-weight:700;color:#d97706;background:#fffbeb;border-left:4px solid #d97706;padding:6px 11px;border-radius:4px;margin-bottom:9px;}table{width:100%;border-collapse:collapse;}thead tr{background:#1e3a6e;color:#fff;}thead th{padding:11px 8px;text-align:center;font-weight:700;font-size:17px;letter-spacing:.5px;}thead th:nth-child(2){text-align:left;}tbody tr:nth-child(odd){background:#f8fafc;}tbody tr:nth-child(even){background:#fff;}tbody td{padding:12px 8px;border-bottom:1px solid #e2e8f0;font-size:18px;}tbody td:nth-child(2){text-align:left;}.sub-row{background:#eff6ff !important;font-weight:700;color:#1e40af;}.sub-row td{border-top:2px solid #bfdbfe;border-bottom:2px solid #bfdbfe;padding:12px 8px;font-size:18px;}.p-summary{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px;}.p-sum-box{border:2px solid #e2e8f0;border-radius:8px;padding:14px 16px;text-align:center;}.p-sum-box.highlight{border-color:#1e3a6e;background:#f0f4ff;}.p-sum-label{font-size:15px;font-weight:700;color:#64748b;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;}.p-sum-val{font-size:36px;font-weight:900;color:#1e3a6e;}.p-sum-unit{font-size:18px;color:#94a3b8;margin-left:2px;}.p-footer{display:none;}</style>
   <div class="p-wrap">
-    <div class="p-header"><div><div class="p-title">🏗️ ${eh(caseName)} 施工面積記錄</div><div class="p-subtitle">${eh(rec.zone||'')}${rec.material?'　　料別：'+eh(rec.material):''}</div></div><div class="p-logo">📋</div></div>
+    <div class="p-header"><div><div class="p-title">🏗️ ${eh(caseName)} 施工面積記錄</div><div class="p-subtitle">${eh(rec.zone||'')}${rec.material?'　　料別：'+eh(rec.material):''}${rec.bento?'　🍱 便當：'+eh(rec.bento):''}</div></div><div class="p-logo">📋</div></div>
     <div class="p-info">
       <div class="p-info-item"><div class="p-info-label">日期</div><div class="p-info-val">${eh(rec.date||'—')}</div></div>
       <div class="p-info-item"><div class="p-info-label">星期</div><div class="p-info-val">${eh(rec.weekday||'—')}</div></div>
