@@ -302,6 +302,7 @@ table.dt tbody tr:last-child td{border-bottom:none;}
 <div class="topbar">
   <div class="topbar-title">📋 施工面積管理</div>
   <div class="topbar-right">
+    <button class="btn btn-ghost" style="font-size:11px;padding:5px 9px" onclick="normalizeAllDates()" title="將所有日期格式統一為 115/04/08">📅 補零</button>
     <div class="sync-pill" id="syncPill" style="pointer-events:none">
       <div style="display:flex;align-items:center;gap:4px">
         <div class="sync-dot"></div>
@@ -1423,6 +1424,35 @@ function renderFiltered() {
 }
 
 
+
+
+// ══════════════════════════════════════════
+//  NORMALIZE ALL DATES (一鍵補零)
+// ══════════════════════════════════════════
+async function normalizeAllDates() {
+  let recCount = 0, caseCount = 0;
+
+  // Fix records
+  for (const rec of records) {
+    let changed = false;
+    const nd = normDate(rec.date);
+    if (nd && nd !== rec.date) { rec.date = nd; changed = true; }
+    if (changed) { recCount++; await persistRecord(rec); }
+  }
+
+  // Fix cases
+  for (const c of cases) {
+    let changed = false;
+    const np = normDate(c.preAcceptDate);
+    const nm = normDate(c.mainAcceptDate);
+    if (np && np !== c.preAcceptDate) { c.preAcceptDate = np; changed = true; }
+    if (nm && nm !== c.mainAcceptDate) { c.mainAcceptDate = nm; changed = true; }
+    if (changed) { caseCount++; await persistCase(c); }
+  }
+
+  render();
+  showToast(`已修正 ${recCount} 筆記錄、${caseCount} 個派案的日期格式 ✓`, 'success');
+}
 
 // ══════════════════════════════════════════
 //  TIME & DATE FORMATTERS / VALIDATORS
