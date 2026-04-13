@@ -88,6 +88,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .add-card{background:var(--surface);border:2px dashed var(--border);border-radius:11px;padding:14px;text-align:center;cursor:pointer;color:var(--text-dim);font-size:16px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:7px;margin-bottom:14px;transition:border-color .2s,background .2s,color .2s;box-shadow:var(--shadow);}
 .add-card:active{border-color:var(--accent);background:#eff6ff;color:var(--accent);}
 
+/* DRAG HANDLE */
+.drag-handle{display:flex;align-items:center;justify-content:center;cursor:grab;color:var(--text-dim);padding:0 2px;touch-action:none;font-size:14px;}
+.drag-handle:active{cursor:grabbing;}
+tr.dragging{opacity:.4;background:var(--surface2) !important;}
+tr.drag-over{border-top:2px solid var(--accent);}
 /* TABLE */
 .tbl-section{margin-top:2px;}
 .tbl-label{font-size:15px;font-weight:700;color:var(--accent2);margin-bottom:6px;padding:5px 9px;background:#fffbeb;border-radius:5px;border-left:3px solid var(--accent2);}
@@ -829,8 +834,8 @@ function renderCard(rec){
     onpointerleave="cancelLongPress()"
     oncontextmenu="event.preventDefault();openCtx(event,${rec.id})">
     <div class="record-meta" onclick="batchMode?toggleBatchSelect(${rec.id},document.getElementById('chk-'+${rec.id})):toggle(${rec.id})" style="cursor:pointer;flex:1;min-width:0">
-      <span class="card-loc-badge" id="tloc-${rec.id}">${eh(rec.caseLocation||'板橋')}</span>
-      <span class="card-case-badge" id="tcn-${rec.id}">${eh(buildCaseNumLabel(rec))}</span>
+      <span class="card-loc-badge" id="tloc-${rec.id}">${eh((cases.find(c=>c.id===rec.caseId)||{caseLocation:rec.caseLocation||''}).caseLocation||rec.caseLocation||'?')}</span>
+      <span class="card-case-badge" id="tcn-${rec.id}">${eh((()=>{const c=cases.find(x=>x.id===rec.caseId);const num=c?c.caseNum:rec.caseNum;return num?`第${num}派案`:`派案`;})())}</span>
       <span class="tag accent" id="td-${rec.id}">${eh(rec.date||'--')}</span>
       <span class="tag"        id="tw-${rec.id}">${eh(rec.weekday||'')}</span>
       <span class="tag warn"   id="ts-${rec.id}">${eh(rec.shift||'--')}</span>
@@ -894,9 +899,9 @@ function renderCard(rec){
       </div>
     </div>
     <div class="info-grid-3">
-      <div class="fg"><div class="fl">前置作業</div><input class="fi" type="time" value="${rec.prepare||''}" onchange="uf(${rec.id},'prepare',this.value)"></div>
-      <div class="fg"><div class="fl">刨除時間</div><input class="fi" type="time" value="${rec.milling||''}" onchange="uf(${rec.id},'milling',this.value)"></div>
-      <div class="fg"><div class="fl">鋪設時間</div><input class="fi" type="time" value="${rec.paving||''}" onchange="uf(${rec.id},'paving',this.value)"></div>
+      <div class="fg"><div class="fl">前置作業</div><input class="fi" type="text" inputmode="numeric" value="${rec.prepare||''}" placeholder="00:00" maxlength="5" oninput="fmtTime24(this);uf(${rec.id},'prepare',this.value)"></div>
+      <div class="fg"><div class="fl">刨除時間</div><input class="fi" type="text" inputmode="numeric" value="${rec.milling||''}" placeholder="00:00" maxlength="5" oninput="fmtTime24(this);uf(${rec.id},'milling',this.value)"></div>
+      <div class="fg"><div class="fl">鋪設時間</div><input class="fi" type="text" inputmode="numeric" value="${rec.paving||''}" placeholder="00:00" maxlength="5" oninput="fmtTime24(this);uf(${rec.id},'paving',this.value)"></div>
     </div>
     <div class="fg"><div class="fl">料別</div><div class="sw"><select class="fs" id="ms-${rec.id}" onchange="uMat(${rec.id},this)">${matOpts(rec.material)}</select></div></div>
 
@@ -904,6 +909,7 @@ function renderCard(rec){
       <div class="tbl-label" id="tl-${rec.id}">📊 施工路段明細 — ${eh(rec.zone||'')}</div>
       <div class="tbl-wrap"><table class="dt">
         <thead><tr>
+          <th style="width:20px"></th>
           <th style="width:30px">順序</th><th>施工路段</th>
           <th style="width:60px">面積(m²)</th><th style="width:56px">厚度(cm)</th>
           <th style="width:60px">噸數(T)</th><th style="width:64px">刨除(-0.5)</th>
@@ -992,7 +998,12 @@ function renderRow(rec,row,idx){
   const a=+row.area||0, t=row.thickness||'';
   const tons=a&&t?calcTons(a,t).toFixed(2):'';
   const mill=a&&t?calcMill(a,t).toFixed(2):'';
-  return `<tr id="tr-${rec.id}-${row.id}">
+  return `<tr id="tr-${rec.id}-${row.id}" draggable="true"
+    ondragstart="rowDragStart(event,${rec.id},${row.id})"
+    ondragover="rowDragOver(event)"
+    ondrop="rowDrop(event,${rec.id},${row.id})"
+    ondragend="rowDragEnd(event)">
+    <td><div class="drag-handle" title="拖曳排序">⠿</div></td>
     <td><div class="cr">${idx+1}</div></td>
     <td><input class="ci seg" value="${ea(row.segment||'')}" oninput="urf(${rec.id},${row.id},'segment',this.value)" placeholder="路段名稱"></td>
     <td><input class="ci" type="number" step="0.1" value="${a||''}" oninput="urA(${rec.id},${row.id},this)" placeholder="0"></td>
@@ -1269,11 +1280,9 @@ function renderCaseBigCard(c) {
 
   // Accept badge
   let acceptBadge = '';
-  if (allDone) {
-    if (c.mainAcceptDate) acceptBadge = `<span class="case-accept-badge done">正驗：${c.mainAcceptDate}</span>`;
-    else if (c.preAcceptDate) acceptBadge = `<span class="case-accept-badge done">初驗：${c.preAcceptDate}</span>`;
-    else acceptBadge = `<span class="case-accept-badge pending">⏳ 待驗收</span>`;
-  }
+  if (c.mainAcceptDate) acceptBadge = `<span class="case-accept-badge done">正驗：${c.mainAcceptDate}</span>`;
+  else if (c.preAcceptDate) acceptBadge = `<span class="case-accept-badge done">初驗：${c.preAcceptDate}</span>`;
+  else if (allDone) acceptBadge = `<span class="case-accept-badge pending">⏳ 待驗收</span>`;
 
   return `<div class="case-card" id="${cid}">
     <div class="case-card-header" onclick="toggleCase('${cid}')">
@@ -1321,7 +1330,7 @@ function renderCaseBigCard(c) {
         </div>
         ${c.caseNum ? `<button style="font-size:11px;color:#fff;background:#16a34a;border:none;border-radius:5px;padding:4px 10px;cursor:pointer;font-weight:600" onclick="lockCase(${c.id})">✓ 確認</button>` : ''}
       `}
-      ${allDone ? `
+      ${(allDone || c.preAcceptDate || c.mainAcceptDate) ? `
         <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
           <span style="font-size:12px;color:#16a34a;font-weight:600">初驗</span>
           <input class="fi" style="width:100px;font-size:13px;padding:5px 7px" value="${ea(c.preAcceptDate||'')}" onblur="uCase(${c.id},'preAcceptDate',this.value)" placeholder="115/4/20">
@@ -1382,6 +1391,58 @@ function renderFiltered() {
   rl.innerHTML = html;
   updateStats();
   updateJumpPicker(filteredCases.map(c=>`${c.caseLocation||''}第${c.caseNum||'?'}派案`));
+}
+
+
+
+// ══════════════════════════════════════════
+//  TIME INPUT FORMATTER (24h XX:XX)
+// ══════════════════════════════════════════
+function fmtTime24(input) {
+  let v = input.value.replace(/[^0-9]/g,'');
+  if (v.length >= 3) v = v.slice(0,2) + ':' + v.slice(2,4);
+  input.value = v;
+}
+
+// ══════════════════════════════════════════
+//  ROW DRAG TO REORDER
+// ══════════════════════════════════════════
+let _dragRecId=null, _dragRowId=null;
+
+function rowDragStart(e, recId, rowId) {
+  _dragRecId=recId; _dragRowId=rowId;
+  e.currentTarget.classList.add('dragging');
+  e.dataTransfer.effectAllowed='move';
+}
+function rowDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect='move';
+  // Highlight target row
+  document.querySelectorAll('tr.drag-over').forEach(r=>r.classList.remove('drag-over'));
+  e.currentTarget.classList.add('drag-over');
+}
+function rowDrop(e, recId, targetRowId) {
+  e.preventDefault();
+  document.querySelectorAll('tr.drag-over').forEach(r=>r.classList.remove('drag-over'));
+  if (_dragRecId !== recId || _dragRowId === targetRowId) return;
+  const rec = gr(recId); if (!rec) return;
+  const fromIdx = rec.rows.findIndex(r=>r.id===_dragRowId);
+  const toIdx   = rec.rows.findIndex(r=>r.id===targetRowId);
+  if (fromIdx<0||toIdx<0) return;
+  // Reorder array
+  const [moved] = rec.rows.splice(fromIdx,1);
+  rec.rows.splice(toIdx,0,moved);
+  persistRecord(rec);
+  // Re-render just the tbody
+  const tbody = document.getElementById(`tb-${recId}`);
+  if (tbody) tbody.innerHTML = rec.rows.map((r,i)=>renderRow(rec,r,i)).join('');
+  reindex(recId);
+  updTots(recId);
+}
+function rowDragEnd(e) {
+  e.currentTarget.classList.remove('dragging');
+  document.querySelectorAll('tr.drag-over').forEach(r=>r.classList.remove('drag-over'));
+  _dragRecId=null; _dragRowId=null;
 }
 
 // ══════════════════════════════════════════
