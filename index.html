@@ -919,15 +919,17 @@ function renderCard(rec){
         <tbody id="tb-${rec.id}">${rec.rows.map((r,i)=>renderRow(rec,r,i)).join('')}</tbody>
         <tfoot>
           <tr class="total-row">
+            <td></td>
             <td colspan="2" style="text-align:right;padding-right:6px;font-size:10px;color:var(--text-dim)">小計</td>
             <td id="ta-${rec.id}">${n(ta,1)}</td>
             <td style="font-size:10px;color:var(--text-dim)">總噸數(T)</td>
             <td id="tt-${rec.id}">${n(tt)}</td>
             <td id="tm-${rec.id}">${n(tm)}</td>
-            <td style="font-size:12px;font-weight:700;color:#1d4ed8" id="ts-sign-${rec.id}">${(()=>{const s=(rec.rows||[]).reduce((x,r)=>x+(+r.signs||0),0);return s>0?s+'張':'';})()}</td>
+            <td style="font-size:12px;font-weight:700;color:#1d4ed8;text-align:center" id="ts-sign-${rec.id}">${(()=>{const s=(rec.rows||[]).reduce((x,r)=>x+(+r.signs||0),0);return s>0?s+'張':'';})()}</td>
             <td></td>
           </tr>
           <tr class="summary-row">
+            <td></td>
             <td colspan="2" style="color:var(--text-dim);font-size:10px">總面積(m²)</td>
             <td id="sa-${rec.id}" style="color:var(--accent2)">${n(ta,1)}</td>
             <td style="color:var(--text-dim);font-size:10px">總噸數(T)</td>
@@ -1882,7 +1884,7 @@ function buildRecHtml(rec){
   return `<div class="p-wrap"><div class="p-header"><div><div class="p-title">🏗️ ${eh(caseName)} 施工面積記錄</div><div class="p-subtitle">${eh(rec.zone||'')}${rec.material?'　料別：'+eh(rec.material):''}</div></div><div class="p-logo">📋</div></div>
     <div class="p-info"><div class="p-info-item"><div class="p-info-label">日期</div><div class="p-info-val">${eh(rec.date||'—')}</div></div><div class="p-info-item"><div class="p-info-label">星期</div><div class="p-info-val">${eh(rec.weekday||'—')}</div></div><div class="p-info-item"><div class="p-info-label">日/夜</div><div class="p-info-val">${eh(rec.shift||'—')}</div></div><div class="p-info-item"><div class="p-info-label">前置</div><div class="p-info-val">${eh(rec.prepare||'—')}</div></div><div class="p-info-item"><div class="p-info-label">刨除</div><div class="p-info-val">${eh(rec.milling||'—')}</div></div><div class="p-info-item"><div class="p-info-label">鋪設</div><div class="p-info-val">${eh(rec.paving||'—')}</div></div></div>
     <div class="p-tbl-title">📊 施工路段明細</div>
-    <table><thead><tr><th style="width:44px">順序</th><th>施工路段</th><th style="width:76px">面積(m²)</th><th style="width:70px">厚度(cm)</th><th style="width:76px">噸數(T)</th><th style="width:80px">刨除(-0.5)</th></tr></thead>
+    <table><thead><tr><th style="width:44px">順序</th><th>施工路段</th><th style="width:72px">面積(m²)</th><th style="width:64px">厚度(cm)</th><th style="width:72px">噸數(T)</th><th style="width:72px">刨除(-0.5)</th><th style="width:56px">告示牌</th></tr></thead>
     <tbody>${rowsHtml}<tr class="sub-row"><td colspan="2" style="text-align:right;padding-right:12px;font-size:13px">合計</td><td style="text-align:center">${n(ta,1)}</td><td></td><td style="text-align:center">${n(tt)}</td><td style="text-align:center">${n(tm)}</td></tr></tbody></table>
     <div class="p-summary"><div class="p-sum-box highlight"><div class="p-sum-label">總面積</div><div><span class="p-sum-val">${n(ta,1)}</span><span class="p-sum-unit">m²</span></div></div><div class="p-sum-box highlight"><div class="p-sum-label">總噸數</div><div><span class="p-sum-val">${n(tt)}</span><span class="p-sum-unit">T</span></div></div></div></div>`;
 }
@@ -1909,10 +1911,12 @@ function openPreview(id){
   const ta=recTot(rec,'area'), tt=recTot(rec,'tons'), tm=recTot(rec,'mill');
 
   // Before rows HTML
+  const signTotal = rec.rows.reduce((s,r)=>s+(+r.signs||0),0);
   const rowsHtml = rec.rows.map((row,i)=>{
     const a=+row.area||0, t=row.thickness||'';
     const tons=a&&t?calcTons(a,t).toFixed(2):'—';
     const mill=a&&t?calcMill(a,t).toFixed(2):'—';
+    const sg=+row.signs||0;
     return `<tr style="font-size:14px;background:${i%2===0?'#f8fafc':'#fff'}">
       <td style="text-align:center;padding:7px 5px">${i+1}</td>
       <td style="padding:7px 5px">${eh(row.segment||'')}</td>
@@ -1920,6 +1924,7 @@ function openPreview(id){
       <td style="text-align:center;padding:7px 5px">${t||'—'}</td>
       <td style="text-align:center;padding:7px 5px">${tons}</td>
       <td style="text-align:center;padding:7px 5px">${mill}</td>
+      <td style="text-align:center;padding:7px 5px">${sg||'—'}</td>
     </tr>`;
   }).join('');
 
@@ -1983,10 +1988,11 @@ function openPreview(id){
       <thead><tr style="background:#1e3a6e;color:#fff">
         <th style="padding:8px 5px;width:36px;font-size:11px">順序</th>
         <th style="text-align:left;padding:8px 5px;font-size:11px">施工路段</th>
-        <th style="padding:8px 5px;width:64px;font-size:11px">面積(m²)</th>
-        <th style="padding:8px 5px;width:58px;font-size:11px">厚度(cm)</th>
-        <th style="padding:8px 5px;width:64px;font-size:11px">噸數(T)</th>
-        <th style="padding:8px 5px;width:68px;font-size:11px">刨除(-0.5)</th>
+        <th style="padding:8px 5px;width:60px;font-size:11px">面積(m²)</th>
+        <th style="padding:8px 5px;width:54px;font-size:11px">厚度(cm)</th>
+        <th style="padding:8px 5px;width:60px;font-size:11px">噸數(T)</th>
+        <th style="padding:8px 5px;width:64px;font-size:11px">刨除(-0.5)</th>
+        <th style="padding:8px 5px;width:50px;font-size:11px">告示牌</th>
       </tr></thead>
       <tbody>${rowsHtml}
         <tr style="background:#eff6ff;font-weight:700;color:#1e40af;font-size:13px">
@@ -1995,6 +2001,7 @@ function openPreview(id){
           <td></td>
           <td style="text-align:center;padding:8px 5px">${n(tt)}</td>
           <td style="text-align:center;padding:8px 5px">${n(tm)}</td>
+          <td style="text-align:center;padding:8px 5px;color:#1d4ed8">${signTotal>0?signTotal+'張':''}</td>
         </tr>
       </tbody>
     </table>
@@ -2045,8 +2052,9 @@ function printRec(id){
   const caseObj=cases.find(c=>c.id===rec.caseId)||{};
   const caseName=(caseObj.caseLocation||rec.caseLocation||'')+(caseObj.caseNum?`第${caseObj.caseNum}派案`:'');
   const ta=recTot(rec,'area'),tt=recTot(rec,'tons'),tm=recTot(rec,'mill');
-  const rowsHtml=rec.rows.map((row,i)=>{const a=+row.area||0,t=row.thickness||'';const tons=a&&t?calcTons(a,t).toFixed(2):'—';const mill=a&&t?calcMill(a,t).toFixed(2):'—';
-    return `<tr style="font-size:16px"><td style="text-align:center">${i+1}</td><td>${eh(row.segment||'')}</td><td style="text-align:center">${a||'—'}</td><td style="text-align:center">${t||'—'}</td><td style="text-align:center">${tons}</td><td style="text-align:center">${mill}</td></tr>`;}).join('');
+  const signTotal=rec.rows.reduce((s,r)=>s+(+r.signs||0),0);
+  const rowsHtml=rec.rows.map((row,i)=>{const a=+row.area||0,t=row.thickness||'';const tons=a&&t?calcTons(a,t).toFixed(2):'—';const mill=a&&t?calcMill(a,t).toFixed(2):'—';const sg=+row.signs||0;
+    return `<tr style="font-size:16px"><td style="text-align:center">${i+1}</td><td>${eh(row.segment||'')}</td><td style="text-align:center">${a||'—'}</td><td style="text-align:center">${t||'—'}</td><td style="text-align:center">${tons}</td><td style="text-align:center">${mill}</td><td style="text-align:center">${sg||'—'}</td></tr>`;}).join('');
   const afterSection=(rec.afterRows&&rec.afterRows.length)?`<div style="margin-top:20px"><div style="font-size:18px;font-weight:700;color:#16a34a;background:#f0fdf4;border-left:4px solid #16a34a;padding:6px 11px;border-radius:4px;margin-bottom:9px">✅ 施工後明細</div><table><thead><tr style="background:#166534"><th style="width:44px">順序</th><th>施工路段</th><th style="width:76px">面積(m²)</th><th style="width:70px">厚度(cm)</th><th style="width:76px">噸數(T)</th></tr></thead><tbody>${(rec.afterRows||[]).map((row,i)=>{const a=+row.area||0,t=row.thickness||'';const tons=a&&t?calcTons(a,t).toFixed(2):'—';return '<tr><td style="text-align:center">'+(i+1)+'</td><td>'+eh(row.segment||'')+'</td><td style="text-align:center">'+(a||'—')+'</td><td style="text-align:center">'+(t||'—')+'</td><td style="text-align:center">'+tons+'</td></tr>';}).join('')}<tr style="background:#f0fdf4;font-weight:700;color:#166534"><td colspan="2" style="text-align:right;padding-right:12px">合計</td><td style="text-align:center">${n(recAfterTot(rec,'area'),1)}</td><td></td><td style="text-align:center">${n(recAfterTot(rec,'tons'))}</td></tr></tbody></table></div>`:''  ;
   const pa=document.getElementById('print-area');
   pa.innerHTML=`<style>@page{size:A4 portrait;margin:14mm;}@page :first{margin-top:14mm;}html{-webkit-print-color-adjust:exact;print-color-adjust:exact;}*{box-sizing:border-box;margin:0;padding:0;}body{font-family:'Microsoft YaHei','PingFang TC','Noto Sans TC',sans-serif;background:#fff;color:#1e293b;}.p-wrap{padding:0;}.p-header{display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #1e3a6e;padding-bottom:10px;margin-bottom:14px;}.p-title{font-size:30px;font-weight:900;color:#1e3a6e;letter-spacing:1px;}.p-subtitle{font-size:20px;font-weight:700;color:#334155;margin-top:5px;letter-spacing:.5px;}.p-logo{font-size:28px;}.p-info{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;border:1.5px solid #cbd5e1;border-radius:8px;overflow:hidden;margin-bottom:16px;}.p-info-item{padding:9px 13px;border-right:1px solid #cbd5e1;border-bottom:1px solid #cbd5e1;}.p-info-item:nth-child(3n){border-right:none;}.p-info-item:nth-last-child(-n+3){border-bottom:none;}.p-info-label{font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#94a3b8;margin-bottom:3px;}.p-info-val{font-size:20px;font-weight:700;color:#1e293b;}.p-tbl-title{font-size:18px;font-weight:700;color:#d97706;background:#fffbeb;border-left:4px solid #d97706;padding:6px 11px;border-radius:4px;margin-bottom:9px;}table{width:100%;border-collapse:collapse;}thead tr{background:#1e3a6e;color:#fff;}thead th{padding:11px 8px;text-align:center;font-weight:700;font-size:17px;letter-spacing:.5px;}thead th:nth-child(2){text-align:left;}tbody tr:nth-child(odd){background:#f8fafc;}tbody tr:nth-child(even){background:#fff;}tbody td{padding:12px 8px;border-bottom:1px solid #e2e8f0;font-size:18px;}tbody td:nth-child(2){text-align:left;}.sub-row{background:#eff6ff !important;font-weight:700;color:#1e40af;}.sub-row td{border-top:2px solid #bfdbfe;border-bottom:2px solid #bfdbfe;padding:12px 8px;font-size:18px;}.p-summary{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px;}.p-sum-box{border:2px solid #e2e8f0;border-radius:8px;padding:14px 16px;text-align:center;}.p-sum-box.highlight{border-color:#1e3a6e;background:#f0f4ff;}.p-sum-label{font-size:15px;font-weight:700;color:#64748b;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;}.p-sum-val{font-size:36px;font-weight:900;color:#1e3a6e;}.p-sum-unit{font-size:18px;color:#94a3b8;margin-left:2px;}.p-footer{display:none;}</style>
@@ -2061,8 +2069,8 @@ function printRec(id){
       <div class="p-info-item"><div class="p-info-label">鋪設時間</div><div class="p-info-val">${eh(rec.paving||'—')}</div></div>
     </div>
     <div class="p-tbl-title">📊 施工前明細</div>
-    <table><thead><tr><th style="width:44px">順序</th><th>施工路段</th><th style="width:76px">面積(m²)</th><th style="width:70px">厚度(cm)</th><th style="width:76px">噸數(T)</th><th style="width:80px">刨除(-0.5)</th></tr></thead>
-    <tbody>${rowsHtml}<tr class="sub-row"><td colspan="2" style="text-align:right;padding-right:12px;font-size:13px;letter-spacing:.5px">合　計</td><td style="text-align:center">${n(ta,1)}</td><td></td><td style="text-align:center">${n(tt)}</td><td style="text-align:center">${n(tm)}</td></tr></tbody></table>
+    <table><thead><tr><th style="width:44px">順序</th><th>施工路段</th><th style="width:72px">面積(m²)</th><th style="width:64px">厚度(cm)</th><th style="width:72px">噸數(T)</th><th style="width:72px">刨除(-0.5)</th><th style="width:56px">告示牌</th></tr></thead>
+    <tbody>${rowsHtml}<tr class="sub-row"><td colspan="2" style="text-align:right;padding-right:12px;font-size:13px;letter-spacing:.5px">合　計</td><td style="text-align:center">${n(ta,1)}</td><td></td><td style="text-align:center">${n(tt)}</td><td style="text-align:center">${n(tm)}</td><td style="text-align:center;color:#1d4ed8">${signTotal>0?signTotal+'張':''}</td></tr></tbody></table>
     <div class="p-summary"><div class="p-sum-box highlight"><div class="p-sum-label">總面積</div><div><span class="p-sum-val">${n(ta,1)}</span><span class="p-sum-unit">m²</span></div></div><div class="p-sum-box highlight"><div class="p-sum-label">總噸數</div><div><span class="p-sum-val">${n(tt)}</span><span class="p-sum-unit">T</span></div></div></div>
     ${afterSection}
     <div class="p-footer"><span>列印時間：${new Date().toLocaleString('zh-TW')}</span><span>${eh(buildCaseNo(rec))} — ${eh(rec.zone||'')}</span></div>
