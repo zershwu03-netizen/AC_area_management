@@ -971,15 +971,6 @@ function renderRow(rec,row,idx){
 // ══════════════════════════════════════════
 //  INTERACTIONS
 // ══════════════════════════════════════════
-function toggle(id){
-  const bd=document.getElementById(`bd-${id}`);
-  const ch=document.getElementById(`ch-${id}`);
-  const cd=document.getElementById(`card-${id}`);
-  const o=bd.classList.toggle('open');
-  cd.classList.toggle('active',o);
-  if(ch) ch.style.transform=o?'rotate(180deg)':'';
-}
-function gr(id){return records.find(r=>r.id===id);}
 
 // 驗收日期
 function uAccept(id, val) {
@@ -992,127 +983,11 @@ function uAccept(id, val) {
 }
 
 // 日/夜切換
-function uShift(id, val, btn) {
-  const rec = gr(id); if (!rec) return;
-  rec.shift = val; persistRecord(rec);
-  // update header tag
-  const tag = document.getElementById(`ts-${id}`);
-  if (tag) tag.textContent = val;
-  // update button states
-  const panel = btn.closest('.shift-toggle');
-  if (panel) {
-    panel.querySelectorAll('.shift-btn').forEach(b => {
-      b.className = 'shift-btn';
-      if (b === btn) b.classList.add(val === '日間' ? 'active-day' : 'active-night');
-    });
-  }
-}
 
 // 更新派案地點或編號，重新組合顯示名稱
-function uCaseField(id, field, val) {
-  // 地點選單：若選到「新增地點」則開啟輸入
-  if (field === 'caseLocation' && val === '__addloc__') {
-    // restore select value then open modal
-    const rec0 = gr(id);
-    const sel0 = document.getElementById(`cl-${id}`);
-    if (sel0 && rec0) sel0.value = rec0.caseLocation || locations[0] || '';
-    openLocMo(id);
-    return;
-  }
-  const rec = gr(id); if (!rec) return;
-  rec[field] = val;
-  const badge = document.getElementById(`tcn-${id}`);
-  if (badge) badge.textContent = buildCaseNumLabel(rec);
-  // 同步更新地點 badge
-  if (field === 'caseLocation') {
-    const locBadge = document.getElementById(`tloc-${id}`);
-    if (locBadge) locBadge.textContent = val;
-  }
-  persistRecord(rec);
-}
 
-function uf(id,field,val){
-  const rec=gr(id);if(!rec)return;
-  rec[field]=val; persistRecord(rec);
-  if(field==='shift'){const e=document.getElementById(`ts-${id}`);if(e)e.textContent=val||'--';}
-  if(field==='zone'){
-    const e=document.getElementById(`tz-${id}`);if(e)e.textContent=val||'未命名工區';
-    const l=document.getElementById(`tl-${id}`);if(l)l.textContent=`📊 施工路段明細 — ${val||''}`;
-  }
-}
-function uDate(id,val){
-  const rec=gr(id);if(!rec)return;
-  rec.date=val; rec.weekday=weekday(val); persistRecord(rec);
-  document.getElementById(`td-${id}`).textContent=val||'--';
-  document.getElementById(`tw-${id}`).textContent=rec.weekday;
-  document.getElementById(`wi-${id}`).value=rec.weekday;
-}
-function uMat(id,sel){
-  if(sel.value==='__manage__'){openMatMo();const r=gr(id);if(r)sel.value=r.material;return;}
-  uf(id,'material',sel.value);
-}
-function urf(rId,rId2,f,v){const rec=gr(rId);if(!rec)return;const row=rec.rows.find(r=>r.id===rId2);if(row){row[f]=v;persistRecord(rec);}}
-function urA(rId,rId2,inp){
-  const rec=gr(rId);if(!rec)return;const row=rec.rows.find(r=>r.id===rId2);if(!row)return;
-  row.area=parseFloat(inp.value)||0; refreshRow(rId,rId2,row); updTots(rId); persistRecord(rec);
-}
-function urT(rId,rId2,v){
-  const rec=gr(rId);if(!rec)return;const row=rec.rows.find(r=>r.id===rId2);if(!row)return;
-  row.thickness=v; refreshRow(rId,rId2,row); updTots(rId); persistRecord(rec);
-}
-function refreshRow(rId,rId2,row){
-  const a=+row.area||0,t=row.thickness||'';
-  const te=document.getElementById(`tn-${rId}-${rId2}`);
-  const me=document.getElementById(`mn-${rId}-${rId2}`);
-  if(te)te.textContent=a&&t?calcTons(a,t).toFixed(2):'';
-  if(me)me.textContent=a&&t?calcMill(a,t).toFixed(2):'';
-}
-function updTots(rId){
-  const rec=gr(rId);if(!rec)return;
-  const ta=recTot(rec,'area'),tt=recTot(rec,'tons'),tm=recTot(rec,'mill');
-  const g=id=>document.getElementById(id);
-  if(g(`ta-${rId}`))g(`ta-${rId}`).textContent=n(ta,1);
-  if(g(`tt-${rId}`))g(`tt-${rId}`).textContent=n(tt);
-  if(g(`tm-${rId}`))g(`tm-${rId}`).textContent=n(tm);
-  if(g(`sa-${rId}`))g(`sa-${rId}`).textContent=n(ta,1);
-  if(g(`st-${rId}`))g(`st-${rId}`).textContent=n(tt);
-  if(g(`sm-${rId}`))g(`sm-${rId}`).textContent=n(tm);
-  // update collapsed summary bar
-  if(g(`cs-a-${rId}`))g(`cs-a-${rId}`).textContent=n(ta,1);
-  if(g(`cs-t-${rId}`))g(`cs-t-${rId}`).textContent=n(tt);
-  if(g(`cs-m-${rId}`))g(`cs-m-${rId}`).textContent=n(tm);
-}
 
-function addRow(rId){
-  const rec=gr(rId);if(!rec)return;
-  const nid=Date.now();
-  rec.rows.push({id:nid,segment:'',area:0,thickness:''});
-  const tb=document.getElementById(`tb-${rId}`);
-  if(tb){
-    const tr=document.createElement('tr');tr.id=`tr-${rId}-${nid}`;
-    tr.innerHTML=renderRow(rec,rec.rows[rec.rows.length-1],rec.rows.length-1).replace(/^<tr[^>]*>|<\/tr>$/g,'');
-    tb.appendChild(tr); reindex(rId);
-  }
-  updTots(rId); persistRecord(rec);
-}
-function delRow(rId,rId2){
-  const rec=gr(rId);if(!rec)return;
-  rec.rows=rec.rows.filter(r=>r.id!==rId2);
-  const el=document.getElementById(`tr-${rId}-${rId2}`);if(el)el.remove();
-  reindex(rId); updTots(rId); persistRecord(rec);
-}
-function updSignCount(recId) {
-  const rec = gr(recId); if (!rec) return;
-  const total = (rec.rows||[]).reduce((s,r)=>s+(+r.signs||0),0);
-  // update collapsed card summary sign count
-  const el = document.getElementById(`sign-count-${recId}`);
-  if (el) { el.textContent = total > 0 ? `📋 ${total}` : ''; el.style.display = total>0?'':'none'; }
-}
 
-function reindex(rId){
-  const tb=document.getElementById(`tb-${rId}`);if(!tb)return;
-  tb.querySelectorAll('tr').forEach((tr,i)=>{const c=tr.querySelector('.cr');if(c)c.textContent=i+1;});
-}
 
 function addCase() {
   const cid = Date.now();
@@ -1192,8 +1067,6 @@ function uCase(caseId, field, val) {
 let delCaseTarget = null;
 function askDelCase(id){ delCaseTarget=id; document.getElementById('delMo').classList.add('open'); }
 
-function askDel(id){delTarget=id;document.getElementById('delMo').classList.add('open');}
-function closeDelMo(){document.getElementById('delMo').classList.remove('open');delTarget=null;}
 async function confirmDel(){
   if(delTarget!=null){ await removeRecord(delTarget); delTarget=null; }
   else if(delCaseTarget!=null){ await removeCase(delCaseTarget); delCaseTarget=null; }
@@ -1201,55 +1074,9 @@ async function confirmDel(){
 }
 
 // Material modal
-function openMatMo(){renderMatList();document.getElementById('matMo').classList.add('open');}
-function closeMatMo(){document.getElementById('matMo').classList.remove('open');render();}
-function renderMatList(){
-  document.getElementById('matList').innerHTML=materials.length
-    ?materials.map((m,i)=>`<div class="mat-item"><span>${eh(m)}</span>
-        <button class="mat-del" onclick="removeMat(${i})">×</button></div>`).join('')
-    :`<div style="color:var(--text-dim);font-size:12px;padding:5px">尚無料別</div>`;
-}
-function addMat(){
-  const inp=document.getElementById('matInp'),v=inp.value.trim();
-  if(!v)return;if(materials.includes(v)){showToast('料別已存在','error');return;}
-  materials.push(v);persistMats();inp.value='';renderMatList();showToast(`已新增「${v}」`,'success');
-}
-function removeMat(i){const nm=materials.splice(i,1)[0];persistMats();renderMatList();showToast(`已刪除「${nm}」`);}
 
 // Location modal
 let _locCallerCardId = null;
-function openLocMo(cardId) {
-  _locCallerCardId = cardId || null;
-  renderLocList();
-  document.getElementById('locMo').classList.add('open');
-}
-function closeLocMo() {
-  document.getElementById('locMo').classList.remove('open');
-  // Re-render cards to update location selects
-  render();
-}
-function renderLocList() {
-  document.getElementById('locList').innerHTML = locations.length
-    ? locations.map((l,i) => `<div class="mat-item">
-        <span>${eh(l)}</span>
-        <button class="mat-del" onclick="removeLoc(${i})" ${locations.length<=1?'disabled style="opacity:.3"':''}>×</button>
-      </div>`).join('')
-    : `<div style="color:var(--text-dim);font-size:12px;padding:5px">尚無地點</div>`;
-}
-function addLoc() {
-  const inp = document.getElementById('locInp'), v = inp.value.trim();
-  if (!v) return;
-  if (locations.includes(v)) { showToast('地點已存在','error'); return; }
-  locations.push(v);
-  saveLocal(); inp.value = ''; renderLocList();
-  showToast(`已新增「${v}」`,'success');
-}
-function removeLoc(i) {
-  if (locations.length <= 1) { showToast('至少保留一個地點','error'); return; }
-  const nm = locations.splice(i, 1)[0];
-  saveLocal(); renderLocList();
-  showToast(`已刪除「${nm}」`);
-}
 
 
 
