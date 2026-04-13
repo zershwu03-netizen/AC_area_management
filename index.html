@@ -1217,6 +1217,51 @@ function removeLoc(i) {
 
 
 
+
+// ══════════════════════════════════════════
+//  JUMP PICKER & MONTH TOGGLE
+// ══════════════════════════════════════════
+function updateJumpPicker(labels) {
+  const sel = document.getElementById('jumpSel');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">選擇派案…</option>' +
+    labels.map(l => `<option value="${l}">${l}</option>`).join('');
+}
+
+function jumpToMonth(key) {
+  if (!key) return;
+  // Find the case card with matching label
+  const allCaseCards = document.querySelectorAll('.case-card');
+  for (const card of allCaseCards) {
+    const locEl = card.querySelector('.case-loc-big');
+    const numEl = card.querySelector('.case-num-big');
+    if (locEl && numEl) {
+      const label = locEl.textContent + numEl.textContent;
+      if (label.includes(key) || key.includes(locEl.textContent)) {
+        card.scrollIntoView({ behavior:'smooth', block:'start' });
+        // Expand if collapsed
+        const cid = card.id;
+        const recs = document.getElementById('recs-' + cid);
+        const chev = document.getElementById('chev-' + cid);
+        if (recs && recs.classList.contains('collapsed')) {
+          recs.classList.remove('collapsed');
+          if (chev) chev.style.transform = '';
+        }
+        break;
+      }
+    }
+  }
+  setTimeout(() => { document.getElementById('jumpSel').value = ''; }, 800);
+}
+
+function toggleMonth(id) {
+  const cards = document.getElementById('cards-' + id);
+  const chev  = document.getElementById('chev-' + id);
+  if (!cards) return;
+  const collapsed = cards.classList.toggle('collapsed');
+  if (chev) chev.style.transform = collapsed ? 'rotate(-90deg)' : '';
+}
+
 // ══════════════════════════════════════════
 //  SEARCH & FILTER
 // ══════════════════════════════════════════
