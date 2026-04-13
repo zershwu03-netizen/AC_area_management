@@ -607,7 +607,6 @@ async function initFirebase() {
     window._fbSave = async (rec) => {
       window._suppressSnapshot = true;
       await setDoc(doc(fbDB,'records',String(rec.id)), JSON.parse(JSON.stringify(rec)));
-      // 短暫延遲後解除，讓其他裝置的真實更新能正常進來
       clearTimeout(window._suppressTimer);
       window._suppressTimer = setTimeout(() => { window._suppressSnapshot = false; }, 1500);
     };
@@ -616,6 +615,12 @@ async function initFirebase() {
       await deleteDoc(doc(fbDB,'records',String(id)));
       clearTimeout(window._suppressTimer);
       window._suppressTimer = setTimeout(() => { window._suppressSnapshot = false; }, 1500);
+    };
+    window._fbSaveCase = async (c) => {
+      await setDoc(doc(fbDB,'cases',String(c.id)), JSON.parse(JSON.stringify(c)));
+    };
+    window._fbDelCase = async (id) => {
+      await deleteDoc(doc(fbDB,'cases',String(id)));
     };
     window._fbSaveMats = async (list) => {
       await setDoc(doc(fbDB,'config','materials'), {list});
@@ -681,15 +686,16 @@ async function persistCase(c) {
 
 async function removeCase(id) {
   cases = cases.filter(c=>c.id!==id);
-  // also remove all records belonging to this case
   const toRemove = records.filter(r=>r.caseId===id);
   records = records.filter(r=>r.caseId!==id);
   saveLocal();
-  if (fbConnected) {
-    if (window._fbDelCase) try { await window._fbDelCase(id); } catch(e){}
+  render();
+  if (fbConnected && window._fbDelCase) {
+    try { await window._fbDelCase(id); } catch(e){ showToast('雲端刪除失敗','error'); }
     for (const r of toRemove) {
       if (window._fbDel) try { await window._fbDel(r.id); } catch(e){}
     }
+    showToast('派案已刪除','error');
   }
 }
 
@@ -767,12 +773,6 @@ function weekday(s){const d=parseDate(s);return(d&&!isNaN(d))?WEEKDAYS[d.getDay(
 //  RENDER
 // ══════════════════════════════════════════
 function render(){
-  const rl=document.getElementById('rl');
-  if(!records.length){
-    rl.innerHTML=`<div style="text-align:center;padding:36px 14px;color:var(--text-dim);font-size:13px">
-      <div style="font-size:30px;margin-bottom:9px;opacity:.4">📋</div>尚無施工記錄</div>`;
-    updateStats(); return;
-  }
   renderFiltered();
   updateStats();
 }
