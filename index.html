@@ -2190,15 +2190,23 @@ function printRec(id){
 // ══════════════════════════════════════════
 //  STATS MODAL
 // ══════════════════════════════════════════
+// Manual stats order — null means use auto sort
+let _statsOrder = null;
+
 function getStatsList() {
-  // Sort by newest record date in each case, fallback to insertion order reversed
+  if (_statsOrder) {
+    // Use manual order, but include any new cases not in order yet
+    const ordered = _statsOrder.map(id => cases.find(c=>c.id===id)).filter(Boolean);
+    const extra = cases.filter(c => !_statsOrder.includes(c.id));
+    return [...ordered, ...extra];
+  }
+  // Auto sort by newest record date
   return [...cases].sort((a, b) => {
     const recsA = getCaseRecords(a.id);
     const recsB = getCaseRecords(b.id);
     const latestA = recsA.length ? recsA.reduce((m,r)=>{ const d=parseDate(r.date); return d&&d>m?d:m; }, new Date(0)) : new Date(0);
     const latestB = recsB.length ? recsB.reduce((m,r)=>{ const d=parseDate(r.date); return d&&d>m?d:m; }, new Date(0)) : new Date(0);
-    if (latestA.getTime() !== latestB.getTime()) return latestB - latestA; // newest first
-    // Same date or no records: fallback to reverse insertion order
+    if (latestA.getTime() !== latestB.getTime()) return latestB - latestA;
     return cases.indexOf(b) - cases.indexOf(a);
   });
 }
@@ -2245,16 +2253,15 @@ function moveStatRow(caseId, dir) {
   const idx = sorted.findIndex(c=>c.id===caseId);
   const newIdx = idx + dir;
   if (newIdx < 0 || newIdx >= sorted.length) return;
-  // Swap in the original cases array
-  const aIdx = cases.indexOf(sorted[idx]);
-  const bIdx = cases.indexOf(sorted[newIdx]);
-  if (aIdx<0||bIdx<0) return;
-  [cases[aIdx], cases[bIdx]] = [cases[bIdx], cases[aIdx]];
-  saveLocal();
+  // Save current order as manual order
+  const arr = sorted.map(c=>c.id);
+  [arr[idx], arr[newIdx]] = [arr[newIdx], arr[idx]];
+  _statsOrder = arr;
   renderStatsGrid();
 }
 
 function openStatsModal(){
+  _statsOrder = null; // Reset to auto sort each time modal opens
   document.getElementById('statsMo').classList.add('open');
   renderStatsGrid();
 }
