@@ -93,11 +93,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .tbl-wrap{overflow-x:auto;border-radius:8px;border:1px solid var(--border);}
 table.dt{width:100%;border-collapse:collapse;min-width:490px;}
 table.dt th{background:#f1f5f9;color:var(--text-dim);font-size:15px;font-weight:700;letter-spacing:.4px;padding:8px 4px;text-align:center;border-bottom:2px solid var(--border);white-space:nowrap;}
-table.dt td{padding:5px 3px;border-bottom:1px solid var(--border);font-size:15px;text-align:center;vertical-align:middle;}
+table.dt td{padding:5px 3px;border-bottom:1px solid var(--border);font-size:15px;text-align:center;vertical-align:middle;user-select:none;}
 table.dt tbody tr:nth-child(odd) td{background:var(--row-odd);}
 table.dt tbody tr:nth-child(even) td{background:var(--row-even);}
 table.dt tbody tr:last-child td{border-bottom:none;}
-.ci{background:transparent;border:1.5px solid transparent;border-radius:5px;padding:5px 3px;font-family:var(--font);font-size:15px;color:var(--text);width:100%;text-align:center;transition:border-color .15s,background .15s;min-width:44px;}
+.ci{background:transparent;border:1.5px solid transparent;border-radius:5px;padding:5px 3px;font-family:var(--font);font-size:15px;color:var(--text);width:100%;text-align:center;transition:border-color .15s,background .15s;min-width:44px;user-select:text;}
 .ci:focus{outline:none;border-color:var(--accent);background:#fff;}
 .ci.seg{min-width:100px;text-align:left;}
 .cr{font-size:15px;color:var(--accent2);font-weight:700;padding:4px 2px;}
@@ -154,6 +154,26 @@ table.dt tbody tr:last-child td{border-bottom:none;}
 
 
 
+
+/* CASE GROUP CARD */
+.case-card{background:var(--surface);border:1.5px solid var(--accent);border-radius:12px;overflow:hidden;box-shadow:var(--shadow);margin-bottom:10px;}
+.case-card-header{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;cursor:pointer;background:linear-gradient(135deg,#eff6ff,#f8fafc);gap:8px;user-select:none;}
+.case-header-left{display:flex;flex-direction:column;gap:5px;flex:1;min-width:0;}
+.case-header-row1{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.case-loc-big{font-size:14px;font-weight:800;color:#fff;background:var(--accent);border-radius:6px;padding:3px 10px;white-space:nowrap;}
+.case-num-big{font-size:14px;font-weight:700;color:var(--accent);background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:6px;padding:3px 10px;white-space:nowrap;}
+.case-header-row2{display:flex;gap:12px;flex-wrap:wrap;align-items:baseline;}
+.case-stat{display:flex;align-items:baseline;gap:3px;}
+.case-stat-label{font-size:11px;color:var(--text-dim);}
+.case-stat-val{font-size:15px;font-weight:700;color:var(--accent);}
+.case-stat-unit{font-size:11px;color:var(--text-dim);}
+.case-accept-badge{font-size:11px;font-weight:700;border-radius:5px;padding:2px 8px;white-space:nowrap;}
+.case-accept-badge.done{color:#166534;background:#dcfce7;border:1px solid #86efac;}
+.case-accept-badge.pending{color:#92400e;background:#fef3c7;border:1px solid #fcd34d;}
+.case-records{padding:0 10px 10px;}
+.case-records.collapsed{display:none;}
+.case-accept-section{padding:10px 14px 0;background:#f0fdf4;border-top:1px solid #86efac;display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+.sign-count-badge{font-size:12px;font-weight:700;color:#1d4ed8;background:#eff6ff;border:1px solid #bfdbfe;border-radius:5px;padding:2px 8px;white-space:nowrap;}
 /* MONTH GROUP */
 .month-group{}
 .month-header{display:flex;align-items:center;justify-content:space-between;padding:8px 4px 6px;cursor:pointer;user-select:none;}
@@ -689,7 +709,7 @@ function renderCard(rec){
       <span class="tag accent" id="td-${rec.id}">${eh(rec.date||'--')}</span>
       <span class="tag"        id="tw-${rec.id}">${eh(rec.weekday||'')}</span>
       <span class="tag warn"   id="ts-${rec.id}">${eh(rec.shift||'--')}</span>
-      ${locked ? `<span class="locked-badge" id="lb-${rec.id}">✅ 已完工${rec.acceptDate ? '　驗收：'+rec.acceptDate : '　⏳ 待驗收'}</span>` : ''}
+      ${locked ? '<span class="locked-badge">✅ 已完工</span>' : ''}
     </div>
     <div class="record-actions">
       <div class="card-check" id="chk-${rec.id}" onclick="event.stopPropagation();toggleBatchSelect(${rec.id},this)"></div>
@@ -731,10 +751,7 @@ function renderCard(rec){
     </div>` : ''}
   </div>
   <div class="record-body" id="bd-${rec.id}" onclick="event.stopPropagation()" style="${locked?'pointer-events:none;opacity:.7':''}">
-    ${locked ? `<div style="display:flex;align-items:center;gap:8px;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:9px 12px;pointer-events:auto">
-      <span style="font-size:13px;font-weight:700;color:#16a34a;white-space:nowrap">驗收日期</span>
-      <input class="fi" style="background:#fff;flex:1;font-size:14px;pointer-events:auto" value="${ea(rec.acceptDate||'')}" oninput="uAccept(${rec.id},this.value)" placeholder="115/4/20">
-    </div>` : ''}
+
     <div class="info-grid">
       <div class="fg"><div class="fl">派案地點</div>
         <div class="sw">
@@ -1088,6 +1105,60 @@ function removeLoc(i) {
 
 
 
+
+// ══════════════════════════════════════════
+//  CASE GROUP FUNCTIONS
+// ══════════════════════════════════════════
+function toggleCase(cid) {
+  const recs = document.getElementById('recs-' + cid);
+  const chev = document.getElementById('chev-' + cid);
+  if (!recs) return;
+  const collapsed = recs.classList.toggle('collapsed');
+  if (chev) chev.style.transform = collapsed ? 'rotate(-90deg)' : '';
+}
+
+// Update acceptance date on all locked records in same case
+function uCaseAccept(caseKey, field, val) {
+  const caseRecs = records.filter(r => buildCaseNo(r) === caseKey && r.locked);
+  caseRecs.forEach(rec => {
+    rec[field] = val;
+    persistRecord(rec);
+  });
+  // Update badge in header
+  const cid = 'cc-' + caseKey.replace(/[^0-9a-z]/gi,'_');
+  const header = document.querySelector(`#${cid} .case-header-row1`);
+  if (header) {
+    const preEl  = document.querySelector(`#cas-${cid} input:nth-child(1)`);
+    const mainEl = document.querySelector(`#cas-${cid} input:nth-child(2)`);
+    // update accept badge
+    let badge = header.querySelector('.case-accept-badge');
+    if (!badge) { badge = document.createElement('span'); badge.className='case-accept-badge'; header.appendChild(badge); }
+    const pre = preEl?.value||'', main = mainEl?.value||val;
+    if (field==='mainAcceptDate'&&val) { badge.className='case-accept-badge done'; badge.textContent='正驗：'+val; }
+    else if (field==='preAcceptDate'&&val&&!main) { badge.className='case-accept-badge done'; badge.textContent='初驗：'+val; }
+    else if (!pre&&!main) { badge.className='case-accept-badge pending'; badge.textContent='⏳ 待驗收'; }
+  }
+}
+
+// Update sign count on all records in same case
+function uCaseSign(caseKey, val) {
+  const caseRecs = records.filter(r => buildCaseNo(r) === caseKey);
+  caseRecs.forEach(rec => {
+    rec.signCount = val;
+    persistRecord(rec);
+  });
+  // Update sign count badge in header
+  const cid = 'cc-' + caseKey.replace(/[^0-9a-z]/gi,'_');
+  const header = document.querySelector(`#${cid} .case-header-row1`);
+  if (header) {
+    let badge = header.querySelector('.sign-count-badge');
+    if (val) {
+      if (!badge) { badge = document.createElement('span'); badge.className='sign-count-badge'; header.insertBefore(badge, header.children[2]); }
+      badge.textContent = '📋 告示牌 ' + val + ' 張';
+    } else if (badge) badge.remove();
+  }
+}
+
 // ══════════════════════════════════════════
 //  SEARCH & FILTER
 // ══════════════════════════════════════════
@@ -1155,49 +1226,112 @@ function renderFiltered() {
     groups[key].push(rec);
   });
 
-  // Separate active vs completed records
-  const activeOrder = [], completedOrder = [];
-  const activeGroups = {}, completedGroups = {};
-
-  order.forEach(key => {
-    const active = groups[key].filter(r => !r.locked);
-    const done   = groups[key].filter(r => r.locked);
-    if (active.length) { activeGroups[key] = active; activeOrder.push(key); }
-    if (done.length)   { completedGroups[key] = done; completedOrder.push(key); }
+  // Group by case (location + caseNum)
+  const caseMap = {};
+  const caseOrder = [];
+  filtered.forEach(rec => {
+    const key = buildCaseNo(rec) || '未命名派案';
+    if (!caseMap[key]) { caseMap[key] = { recs:[], loc: rec.caseLocation||'', num: rec.caseNum||'' }; caseOrder.push(key); }
+    caseMap[key].recs.push(rec);
   });
 
-  const renderGroup = (key, recs, collapsed) => {
-    const id = 'mg-' + key.replace(/[^0-9a-z]/gi,'') + (collapsed?'-done':'');
-    const allDone = recs.every(r => r.locked);
-    return `<div class="month-group" id="${id}">
-      <div class="month-header" onclick="toggleMonth('${id}')">
-        <span class="month-title">${allDone ? '✅' : '📅'} ${key}</span>
-        <div style="display:flex;align-items:center;gap:8px">
-          ${allDone ? '<span style="font-size:11px;font-weight:700;color:#16a34a;background:#f0fdf4;border:1px solid #86efac;border-radius:20px;padding:2px 8px">已完工</span>' : ''}
-          <span class="month-count">${recs.length} 筆</span>
-          <span class="month-chevron" id="chev-${id}" style="${collapsed?'transform:rotate(-90deg)':''}">▾</span>
+  // Separate active vs completed case groups
+  const activeCases = [], doneCases = [];
+  caseOrder.forEach(key => {
+    const allDone = caseMap[key].recs.every(r => r.locked);
+    if (allDone) doneCases.push(key); else activeCases.push(key);
+  });
+
+  const renderCaseCard = (key) => {
+    const { recs, loc, num } = caseMap[key];
+    const cid = 'cc-' + key.replace(/[^0-9a-z]/gi,'_');
+    // Totals across all records in this case
+    const totArea = recs.reduce((s,r)=>s+recTot(r,'area'),0);
+    const totTons = recs.reduce((s,r)=>s+recTot(r,'tons'),0);
+    const totAfterArea = recs.reduce((s,r)=>s+recAfterTot(r,'area'),0);
+    const totAfterTons = recs.reduce((s,r)=>s+recAfterTot(r,'tons'),0);
+    const hasAfter = recs.some(r=>r.afterRows&&r.afterRows.length);
+    const allDone = recs.every(r=>r.locked);
+    // Acceptance from first locked record (they share same case)
+    const doneRec = recs.find(r=>r.locked);
+    const preAccept  = doneRec?.preAcceptDate  || '';
+    const mainAccept = doneRec?.mainAcceptDate || '';
+    const signCount  = recs[0]?.signCount || '';
+
+    // accept badge text
+    let acceptBadge = '';
+    if (allDone) {
+      if (mainAccept) acceptBadge = `<span class="case-accept-badge done">正驗：${mainAccept}</span>`;
+      else if (preAccept) acceptBadge = `<span class="case-accept-badge done">初驗：${preAccept}</span>`;
+      else acceptBadge = `<span class="case-accept-badge pending">⏳ 待驗收</span>`;
+    }
+
+    // diff display
+    const daTot = +(totAfterArea-totArea).toFixed(1);
+    const dtTot = +(totAfterTons-totTons).toFixed(2);
+    const diffCol = v=>v>0?'#16a34a':v<0?'#dc2626':'#64748b';
+    const diffFmt = (v,d)=>v===0?'—':(v>0?'+':'')+v.toFixed(d);
+
+    return `<div class="case-card" id="${cid}">
+      <div class="case-card-header" onclick="toggleCase('${cid}')">
+        <div class="case-header-left">
+          <div class="case-header-row1">
+            <span class="case-loc-big">${eh(loc||'?')}</span>
+            <span class="case-num-big">第${eh(num||'?')}派案</span>
+            ${signCount?`<span class="sign-count-badge">📋 告示牌 ${signCount} 張</span>`:''}
+            ${acceptBadge}
+          </div>
+          <div class="case-header-row2">
+            <div class="case-stat"><span class="case-stat-label">面積</span><span class="case-stat-val">${totArea.toFixed(1)}</span><span class="case-stat-unit"> m²</span></div>
+            <div style="width:1px;height:14px;background:var(--border)"></div>
+            <div class="case-stat"><span class="case-stat-label">噸數</span><span class="case-stat-val">${totTons.toFixed(2)}</span><span class="case-stat-unit"> T</span></div>
+            ${hasAfter?`<div style="width:1px;height:14px;background:var(--border)"></div>
+            <div class="case-stat"><span class="case-stat-label" style="color:#16a34a">後</span><span class="case-stat-val" style="color:#16a34a">${totAfterArea.toFixed(1)}</span><span class="case-stat-unit"> m²</span></div>
+            <div class="case-stat"><span style="font-size:13px;font-weight:700;color:${diffCol(daTot)}">${diffFmt(daTot,1)}</span></div>`:''}
+            <div class="case-stat"><span class="case-stat-label">${recs.length} 筆</span></div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
+          <span class="month-chevron" id="chev-${cid}">▾</span>
         </div>
       </div>
-      <div class="month-cards${collapsed?' collapsed':''}" id="cards-${id}">
-        ${recs.map(r => renderCard(r)).join('')}
+
+      ${allDone ? `<div class="case-accept-section" id="cas-${cid}">
+        <span style="font-size:12px;font-weight:700;color:#16a34a;flex-shrink:0">驗收日期</span>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;flex:1;pointer-events:auto" onclick="event.stopPropagation()">
+          <div style="display:flex;align-items:center;gap:5px">
+            <span style="font-size:12px;color:#64748b;white-space:nowrap">初驗</span>
+            <input class="fi" style="background:#fff;width:110px;font-size:13px;padding:5px 8px;pointer-events:auto" value="${ea(preAccept)}" oninput="uCaseAccept('${key}','preAcceptDate',this.value)" placeholder="115/4/20">
+          </div>
+          <div style="display:flex;align-items:center;gap:5px">
+            <span style="font-size:12px;color:#64748b;white-space:nowrap">正驗</span>
+            <input class="fi" style="background:#fff;width:110px;font-size:13px;padding:5px 8px;pointer-events:auto" value="${ea(mainAccept)}" oninput="uCaseAccept('${key}','mainAcceptDate',this.value)" placeholder="115/5/10">
+          </div>
+          <div style="display:flex;align-items:center;gap:5px">
+            <span style="font-size:12px;color:#64748b;white-space:nowrap">📋 告示牌</span>
+            <input class="fi" style="background:#fff;width:70px;font-size:13px;padding:5px 8px;pointer-events:auto;text-align:center" value="${ea(signCount)}" oninput="uCaseSign('${key}',this.value)" placeholder="0 張">
+          </div>
+        </div>
+      </div>` : `<div style="pointer-events:auto;padding:6px 14px 2px;display:flex;align-items:center;gap:8px;background:#f8fafc;border-top:1px solid var(--border)" onclick="event.stopPropagation()">
+        <span style="font-size:12px;color:#64748b">📋 告示牌</span>
+        <input class="fi" style="background:#fff;width:70px;font-size:13px;padding:5px 8px;text-align:center;pointer-events:auto" value="${ea(signCount)}" oninput="uCaseSign('${key}',this.value)" placeholder="0 張">
+        <span style="font-size:12px;color:#64748b">張</span>
+      </div>`}
+
+      <div class="case-records" id="recs-${cid}">
+        ${recs.map(r=>renderCard(r)).join('')}
       </div>
     </div>`;
   };
 
   let html = '';
-
-  // Active records first (expanded)
-  if (activeOrder.length) {
-    html += activeOrder.map(key => renderGroup(key, activeGroups[key], false)).join('');
-  }
-
-  // Completed records section (expanded)
-  if (completedOrder.length) {
-    html += `<div style="margin-top:8px;margin-bottom:8px;padding:6px 4px;display:flex;align-items:center;gap:8px;border-top:2px dashed #86efac">
-      <span style="font-size:12px;font-weight:700;color:#16a34a;letter-spacing:.5px">✅ 已完工記錄</span>
-      <span style="font-size:11px;color:var(--text-dim)">${completedOrder.reduce((s,k)=>s+completedGroups[k].length,0)} 筆</span>
+  if (activeCases.length) html += activeCases.map(renderCaseCard).join('');
+  if (doneCases.length) {
+    html += `<div style="margin:10px 0 8px;padding:6px 4px;display:flex;align-items:center;gap:8px;border-top:2px dashed #86efac">
+      <span style="font-size:12px;font-weight:700;color:#16a34a">✅ 已完工派案</span>
+      <span style="font-size:11px;color:var(--text-dim)">${doneCases.length} 個派案</span>
     </div>`;
-    html += completedOrder.map(key => renderGroup(key, completedGroups[key], false)).join('');
+    html += doneCases.map(renderCaseCard).join('');
   }
 
   rl.innerHTML = html;
