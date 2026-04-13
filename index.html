@@ -759,6 +759,7 @@ function renderCard(rec){
       <span class="tag accent" id="td-${rec.id}">${eh(rec.date||'--')}</span>
       <span class="tag"        id="tw-${rec.id}">${eh(rec.weekday||'')}</span>
       <span class="tag warn"   id="ts-${rec.id}">${eh(rec.shift||'--')}</span>
+      ${(()=>{const s=(rec.rows||[]).reduce((x,r)=>x+(+r.signs||0),0);return s>0?`<span class="tag" style="background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe" id="sign-hdr-${rec.id}">📋 ${s}</span>`:`<span id="sign-hdr-${rec.id}" style="display:none"></span>`;})()}
       ${locked ? '<span class="locked-badge">✅ 已完工</span>' : ''}
     </div>
     <div class="record-actions">
@@ -803,23 +804,8 @@ function renderCard(rec){
   </div>
   <div class="record-body" id="bd-${rec.id}" onclick="event.stopPropagation()" style="${locked?'pointer-events:none;opacity:.7':''}">
 
-    <div class="info-grid">
-      <div class="fg"><div class="fl">派案地點</div>
-        <div class="sw">
-          <select class="fs" id="cl-${rec.id}" onchange="uCaseField(${rec.id},'caseLocation',this.value)">
-            ${locations.map(l=>`<option value="${ea(l)}"${(rec.caseLocation||'板橋')===l?' selected':''}>${eh(l)}</option>`).join('')}
-            <option value="" disabled>──────</option>
-            <option value="__addloc__">＋ 管理地點…</option>
-          </select>
-        </div>
-      </div>
-      <div class="fg"><div class="fl">第幾派案</div>
-        <div style="display:flex;align-items:center;gap:4px">
-          <span style="font-size:13px;color:var(--text-dim);white-space:nowrap">第</span>
-          <input class="fi" style="text-align:center" value="${ea(rec.caseNum||'')}" oninput="uCaseField(${rec.id},'caseNum',this.value)" placeholder="八">
-          <span style="font-size:13px;color:var(--text-dim);white-space:nowrap">派案</span>
-        </div>
-      </div>
+    <div style="background:#eff6ff;border-radius:7px;padding:7px 11px;font-size:13px;color:var(--accent);font-weight:600">
+      📌 ${eh(buildCaseNo({caseLocation:cases.find(c=>c.id===rec.caseId)?.caseLocation||rec.caseLocation||'', caseNum:cases.find(c=>c.id===rec.caseId)?.caseNum||rec.caseNum||''}))}
     </div>
     <div class="fg"><div class="fl">工區路段</div><input class="fi" value="${ea(rec.zone)}" oninput="uf(${rec.id},'zone',this.value)" placeholder="路段名稱"></div>
     <div class="info-grid-3">
@@ -857,6 +843,7 @@ function renderCard(rec){
             <td style="font-size:10px;color:var(--text-dim)">總噸數(T)</td>
             <td id="tt-${rec.id}">${n(tt)}</td>
             <td id="tm-${rec.id}">${n(tm)}</td>
+            <td style="font-size:12px;font-weight:700;color:#1d4ed8" id="ts-sign-${rec.id}">${(()=>{const s=(rec.rows||[]).reduce((x,r)=>x+(+r.signs||0),0);return s>0?s+'張':'';})()}</td>
             <td></td>
           </tr>
           <tr class="summary-row">
@@ -1125,6 +1112,18 @@ function addRecordToCase(caseId) {
 
 // Kept for backward compat
 function addRecord() { addCase(); }
+function lockCase(caseId) {
+  const c = cases.find(x=>x.id===caseId); if(!c) return;
+  c.locked = true;
+  persistCase(c); render();
+  showToast('派案已確認鎖定', 'success');
+}
+function unlockCase(caseId) {
+  const c = cases.find(x=>x.id===caseId); if(!c) return;
+  c.locked = false;
+  persistCase(c); render();
+}
+
 function uCase(caseId, field, val) {
   const c = cases.find(x=>x.id===caseId); if (!c) return;
   if (field==='caseLocation' && val==='__addloc__') {
@@ -1378,27 +1377,35 @@ function renderCaseBigCard(c) {
       </div>
     </div>
 
-    <!-- Case settings bar (location, caseNum, accept dates) -->
+    <!-- Case settings bar -->
     <div style="padding:8px 14px;background:#f8fafc;border-top:1px solid var(--border);display:flex;flex-wrap:wrap;gap:8px;align-items:center" onclick="event.stopPropagation()">
-      <div class="sw" style="flex-shrink:0">
-        <select class="fs" style="font-size:13px;padding:5px 24px 5px 8px;width:auto" onchange="uCase(${c.id},'caseLocation',this.value)">
-          ${locations.map(l=>`<option value="${ea(l)}"${c.caseLocation===l?' selected':''}>${eh(l)}</option>`).join('')}
-          <option value="" disabled>──</option><option value="__addloc__">＋ 管理地點…</option>
-        </select>
-      </div>
-      <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">
-        <span style="font-size:12px;color:var(--text-dim)">第</span>
-        <input class="fi" style="width:60px;font-size:13px;padding:5px 6px;text-align:center" value="${ea(c.caseNum||'')}" oninput="uCase(${c.id},'caseNum',this.value)" placeholder="八">
-        <span style="font-size:12px;color:var(--text-dim)">派案</span>
-      </div>
-      ${allDone?`<div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
-        <span style="font-size:12px;color:#16a34a;font-weight:600">初驗</span>
-        <input class="fi" style="width:100px;font-size:13px;padding:5px 7px" value="${ea(c.preAcceptDate||'')}" oninput="uCase(${c.id},'preAcceptDate',this.value)" placeholder="115/4/20">
-      </div>
-      <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
-        <span style="font-size:12px;color:#16a34a;font-weight:600">正驗</span>
-        <input class="fi" style="width:100px;font-size:13px;padding:5px 7px" value="${ea(c.mainAcceptDate||'')}" oninput="uCase(${c.id},'mainAcceptDate',this.value)" placeholder="115/5/10">
-      </div>`:''}
+      ${c.locked ? `
+        <span style="font-size:13px;font-weight:700;color:var(--accent);background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:4px 12px">${eh(c.caseLocation||'?')}</span>
+        <span style="font-size:13px;font-weight:700;color:var(--accent)">第${eh(c.caseNum||'?')}派案</span>
+        <button style="font-size:11px;color:var(--text-dim);background:none;border:1px solid var(--border);border-radius:5px;padding:2px 8px;cursor:pointer" onclick="unlockCase(${c.id})">✏️ 修改</button>
+      ` : `
+        <div class="sw" style="flex-shrink:0">
+          <select class="fs" style="font-size:13px;padding:5px 24px 5px 8px;width:auto" onchange="uCase(${c.id},'caseLocation',this.value)">
+            ${locations.map(l=>`<option value="${ea(l)}"${c.caseLocation===l?' selected':''}>${eh(l)}</option>`).join('')}
+            <option value="" disabled>──</option><option value="__addloc__">＋ 管理地點…</option>
+          </select>
+        </div>
+        <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">
+          <span style="font-size:12px;color:var(--text-dim)">第</span>
+          <input class="fi" style="width:60px;font-size:13px;padding:5px 6px;text-align:center" value="${ea(c.caseNum||'')}" oninput="uCase(${c.id},'caseNum',this.value)" placeholder="八">
+          <span style="font-size:12px;color:var(--text-dim)">派案</span>
+        </div>
+        ${c.caseNum ? `<button style="font-size:11px;color:#fff;background:#16a34a;border:none;border-radius:5px;padding:4px 10px;cursor:pointer;font-weight:600" onclick="lockCase(${c.id})">✓ 確認</button>` : ''}
+      `}
+      ${allDone ? `
+        <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
+          <span style="font-size:12px;color:#16a34a;font-weight:600">初驗</span>
+          <input class="fi" style="width:100px;font-size:13px;padding:5px 7px" value="${ea(c.preAcceptDate||'')}" oninput="uCase(${c.id},'preAcceptDate',this.value)" placeholder="115/4/20">
+        </div>
+        <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
+          <span style="font-size:12px;color:#16a34a;font-weight:600">正驗</span>
+          <input class="fi" style="width:100px;font-size:13px;padding:5px 7px" value="${ea(c.mainAcceptDate||'')}" oninput="uCase(${c.id},'mainAcceptDate',this.value)" placeholder="115/5/10">
+        </div>` : ''}
     </div>
 
     <!-- Records inside this case -->
@@ -1752,6 +1759,10 @@ function updSignCount(recId) {
   const total=(rec.rows||[]).reduce((s,r)=>s+(+r.signs||0),0);
   const el=document.getElementById(`sign-count-${recId}`);
   if(el){el.textContent=total>0?`📋 ${total}`:'';el.style.display=total>0?'':'none';}
+  const hdr=document.getElementById(`sign-hdr-${recId}`);
+  if(hdr){if(total>0){hdr.textContent=`📋 ${total}`;hdr.style.display='';}else{hdr.style.display='none';}}
+  const tbl=document.getElementById(`ts-sign-${recId}`);
+  if(tbl) tbl.textContent=total>0?total+'張':'';
 }
 
 // ══════════════════════════════════════════
