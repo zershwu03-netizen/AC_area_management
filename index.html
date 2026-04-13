@@ -1306,39 +1306,41 @@ function renderCaseBigCard(c) {
         <div class="icon-btn danger-hover" onclick="event.stopPropagation();askDelCase(${c.id})" title="刪除派案" style="border-color:#fecaca;color:#dc2626">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:12px;height:12px"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
         </div>
+        <div class="icon-btn" onclick="event.stopPropagation();toggleCaseCollapse('${cid}')" title="縮放" id="collapse-btn-${cid}" style="font-size:13px">⊟</div>
         <span class="month-chevron" id="chev-${cid}">▾</span>
       </div>
     </div>
 
     <!-- Case settings bar -->
-    <div style="padding:8px 14px;background:#f8fafc;border-top:1px solid var(--border);display:flex;flex-wrap:wrap;gap:8px;align-items:center" onclick="event.stopPropagation()">
-      ${c.locked ? `
-        <span style="font-size:13px;font-weight:700;color:var(--accent);background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:4px 12px">${eh(c.caseLocation||'?')}</span>
-        <span style="font-size:13px;font-weight:700;color:var(--accent)">第${eh(c.caseNum||'?')}派案</span>
-        <button style="font-size:11px;color:var(--text-dim);background:none;border:1px solid var(--border);border-radius:5px;padding:2px 8px;cursor:pointer" onclick="unlockCase(${c.id})">✏️ 修改</button>
-      ` : `
-        <div class="sw" style="flex-shrink:0">
-          <select class="fs" style="font-size:13px;padding:5px 24px 5px 8px;width:auto" onchange="uCase(${c.id},'caseLocation',this.value)">
-            ${locations.map(l=>`<option value="${ea(l)}"${c.caseLocation===l?' selected':''}>${eh(l)}</option>`).join('')}
-            <option value="" disabled>──</option><option value="__addloc__">＋ 管理地點…</option>
-          </select>
-        </div>
-        <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">
-          <span style="font-size:12px;color:var(--text-dim)">第</span>
-          <input class="fi" style="width:60px;font-size:13px;padding:5px 6px;text-align:center" value="${ea(c.caseNum||'')}" onblur="uCase(${c.id},'caseNum',this.value)" placeholder="八">
-          <span style="font-size:12px;color:var(--text-dim)">派案</span>
-        </div>
-        ${c.caseNum ? `<button style="font-size:11px;color:#fff;background:#16a34a;border:none;border-radius:5px;padding:4px 10px;cursor:pointer;font-weight:600" onclick="lockCase(${c.id})">✓ 確認</button>` : ''}
-      `}
-      ${(allDone || c.preAcceptDate || c.mainAcceptDate) ? `
-        <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
-          <span style="font-size:12px;color:#16a34a;font-weight:600">初驗</span>
-          <input class="fi" style="width:100px;font-size:13px;padding:5px 7px" value="${ea(c.preAcceptDate||'')}" onblur="uCase(${c.id},'preAcceptDate',this.value)" placeholder="115/4/20">
-        </div>
-        <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
-          <span style="font-size:12px;color:#16a34a;font-weight:600">正驗</span>
-          <input class="fi" style="width:100px;font-size:13px;padding:5px 7px" value="${ea(c.mainAcceptDate||'')}" onblur="uCase(${c.id},'mainAcceptDate',this.value)" placeholder="115/5/10">
-        </div>` : ''}
+    <div class="case-settings-bar" style="padding:8px 14px;background:#f8fafc;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:7px" onclick="event.stopPropagation()">
+      <!-- Row 1: case location/num -->
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:nowrap;overflow:hidden">
+        ${c.locked ? `
+          <span style="font-size:13px;font-weight:700;color:var(--accent);background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:4px 12px;white-space:nowrap">${eh(c.caseLocation||'?')}</span>
+          <span style="font-size:13px;font-weight:700;color:var(--accent);white-space:nowrap">第${eh(c.caseNum||'?')}派案</span>
+          <button style="font-size:11px;color:var(--text-dim);background:none;border:1px solid var(--border);border-radius:5px;padding:2px 8px;cursor:pointer;white-space:nowrap" onclick="unlockCase(${c.id})">✏️ 修改</button>
+        ` : `
+          <div class="sw" style="flex-shrink:0">
+            <select class="fs" style="font-size:13px;padding:5px 24px 5px 8px;width:auto" onchange="uCase(${c.id},'caseLocation',this.value)">
+              ${locations.map(l=>`<option value="${ea(l)}"${c.caseLocation===l?' selected':''}>${eh(l)}</option>`).join('')}
+              <option value="" disabled>──</option><option value="__addloc__">＋ 管理地點…</option>
+            </select>
+          </div>
+          <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">
+            <span style="font-size:12px;color:var(--text-dim)">第</span>
+            <input class="fi" style="width:60px;font-size:13px;padding:5px 6px;text-align:center" value="${ea(c.caseNum||'')}" onblur="uCase(${c.id},'caseNum',this.value)" placeholder="八">
+            <span style="font-size:12px;color:var(--text-dim)">派案</span>
+          </div>
+          ${c.caseNum ? `<button style="font-size:11px;color:#fff;background:#16a34a;border:none;border-radius:5px;padding:4px 10px;cursor:pointer;font-weight:600;white-space:nowrap" onclick="lockCase(${c.id})">✓ 確認</button>` : ''}
+        `}
+      </div>
+      <!-- Row 2: accept dates -->
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:nowrap">
+        <span style="font-size:12px;color:#16a34a;font-weight:600;white-space:nowrap">初驗</span>
+        <input class="fi" style="width:110px;font-size:13px;padding:5px 7px" value="${ea(c.preAcceptDate||'')}" onblur="uCase(${c.id},'preAcceptDate',this.value)" placeholder="115/4/20">
+        <span style="font-size:12px;color:#16a34a;font-weight:600;white-space:nowrap">正驗</span>
+        <input class="fi" style="width:110px;font-size:13px;padding:5px 7px" value="${ea(c.mainAcceptDate||'')}" onblur="uCase(${c.id},'mainAcceptDate',this.value)" placeholder="115/5/10">
+      </div>
     </div>
 
     <!-- Records inside this case -->
@@ -1402,6 +1404,28 @@ function fmtTime24(input) {
   let v = input.value.replace(/[^0-9]/g,'');
   if (v.length >= 3) v = v.slice(0,2) + ':' + v.slice(2,4);
   input.value = v;
+}
+
+
+// ══════════════════════════════════════════
+//  CASE CARD COLLAPSE (hide body/settings, keep header)
+// ══════════════════════════════════════════
+const _caseCollapsed = new Set();
+function toggleCaseCollapse(cid) {
+  const card = document.getElementById(cid);
+  if (!card) return;
+  const btn = document.getElementById('collapse-btn-' + cid);
+  if (_caseCollapsed.has(cid)) {
+    // Expand
+    _caseCollapsed.delete(cid);
+    card.querySelectorAll('.case-settings-bar, .case-records').forEach(el => el.style.display = '');
+    if (btn) btn.textContent = '⊟';
+  } else {
+    // Collapse — hide settings bar and records, keep header
+    _caseCollapsed.add(cid);
+    card.querySelectorAll('.case-settings-bar, .case-records').forEach(el => el.style.display = 'none');
+    if (btn) btn.textContent = '⊞';
+  }
 }
 
 // ══════════════════════════════════════════
