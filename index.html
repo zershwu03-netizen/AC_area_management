@@ -617,7 +617,10 @@ async function initFirebase() {
       window._suppressTimer = setTimeout(() => { window._suppressSnapshot = false; }, 1500);
     };
     window._fbSaveCase = async (c) => {
+      window._suppressSnapshot = true;
       await setDoc(doc(fbDB,'cases',String(c.id)), JSON.parse(JSON.stringify(c)));
+      clearTimeout(window._suppressTimer);
+      window._suppressTimer = setTimeout(() => { window._suppressSnapshot = false; }, 1500);
     };
     window._fbDelCase = async (id) => {
       await deleteDoc(doc(fbDB,'cases',String(id)));
@@ -671,16 +674,21 @@ function updateSyncUI(state) {
 // ══════════════════════════════════════════
 //  CRUD OPERATIONS (local + cloud)
 // ══════════════════════════════════════════
+const _debouncedFbSaveCase = {};
 async function persistCase(c) {
   const i = cases.findIndex(x=>x.id===c.id);
   if (i>=0) cases[i]=c; else cases.push(c);
   saveLocal();
   if (fbConnected && window._fbSaveCase) {
     updateSyncUI('syncing');
-    try { await window._fbSaveCase(c); updateSyncUI('synced'); }
-    catch(e) { showToast('雲端同步失敗','error'); updateSyncUI(); }
+    clearTimeout(_debouncedFbSaveCase[c.id]);
+    _debouncedFbSaveCase[c.id] = setTimeout(async () => {
+      try { await window._fbSaveCase(c); updateSyncUI('synced'); }
+      catch(e) { showToast('雲端同步失敗','error'); updateSyncUI(); }
+    }, 800);
   } else if (!fbConnected) {
-    showToast('已暫存於本機 💾', '');
+    clearTimeout(window._localToastTimer);
+    window._localToastTimer = setTimeout(() => showToast('已暫存於本機 💾', ''), 1000);
   }
 }
 
@@ -699,19 +707,18 @@ async function removeCase(id) {
   }
 }
 
+const _debouncedFbSave = {};
 async function persistRecord(rec) {
   const i = records.findIndex(r=>r.id===rec.id);
   if (i>=0) records[i]=rec; else records.unshift(rec);
   saveLocal(); updateStats();
   if (fbConnected && window._fbSave) {
     updateSyncUI('syncing');
-    try {
-      await window._fbSave(rec);
-      updateSyncUI('synced');
-    } catch(e) {
-      showToast('雲端同步失敗','error');
-      updateSyncUI();
-    }
+    clearTimeout(_debouncedFbSave[rec.id]);
+    _debouncedFbSave[rec.id] = setTimeout(async () => {
+      try { await window._fbSave(rec); updateSyncUI('synced'); }
+      catch(e) { showToast('雲端同步失敗','error'); updateSyncUI(); }
+    }, 800);
   }
 }
 
@@ -1258,7 +1265,7 @@ function renderCaseBigCard(c) {
         </div>
         <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">
           <span style="font-size:12px;color:var(--text-dim)">第</span>
-          <input class="fi" style="width:60px;font-size:13px;padding:5px 6px;text-align:center" value="${ea(c.caseNum||'')}" oninput="uCase(${c.id},'caseNum',this.value)" placeholder="八">
+          <input class="fi" style="width:60px;font-size:13px;padding:5px 6px;text-align:center" value="${ea(c.caseNum||'')}" onblur="uCase(${c.id},'caseNum',this.value)" placeholder="八">
           <span style="font-size:12px;color:var(--text-dim)">派案</span>
         </div>
         ${c.caseNum ? `<button style="font-size:11px;color:#fff;background:#16a34a;border:none;border-radius:5px;padding:4px 10px;cursor:pointer;font-weight:600" onclick="lockCase(${c.id})">✓ 確認</button>` : ''}
@@ -1266,11 +1273,11 @@ function renderCaseBigCard(c) {
       ${allDone ? `
         <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
           <span style="font-size:12px;color:#16a34a;font-weight:600">初驗</span>
-          <input class="fi" style="width:100px;font-size:13px;padding:5px 7px" value="${ea(c.preAcceptDate||'')}" oninput="uCase(${c.id},'preAcceptDate',this.value)" placeholder="115/4/20">
+          <input class="fi" style="width:100px;font-size:13px;padding:5px 7px" value="${ea(c.preAcceptDate||'')}" onblur="uCase(${c.id},'preAcceptDate',this.value)" placeholder="115/4/20">
         </div>
         <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
           <span style="font-size:12px;color:#16a34a;font-weight:600">正驗</span>
-          <input class="fi" style="width:100px;font-size:13px;padding:5px 7px" value="${ea(c.mainAcceptDate||'')}" oninput="uCase(${c.id},'mainAcceptDate',this.value)" placeholder="115/5/10">
+          <input class="fi" style="width:100px;font-size:13px;padding:5px 7px" value="${ea(c.mainAcceptDate||'')}" onblur="uCase(${c.id},'mainAcceptDate',this.value)" placeholder="115/5/10">
         </div>` : ''}
     </div>
 
