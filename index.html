@@ -1414,6 +1414,20 @@ function fmtTime24(input) {
 
 
 // ══════════════════════════════════════════
+//  CASE CARD TOGGLE (expand/collapse records)
+// ══════════════════════════════════════════
+function toggleCase(cid) {
+  const recs = document.getElementById('recs-' + cid);
+  const settings = document.querySelector('#' + cid + ' .case-settings-bar');
+  const chev = document.getElementById('chev-' + cid);
+  if (!recs) return;
+  const isOpen = recs.style.display !== 'none';
+  recs.style.display = isOpen ? 'none' : '';
+  if (settings) settings.style.display = isOpen ? 'none' : '';
+  if (chev) chev.style.transform = isOpen ? 'rotate(-90deg)' : '';
+}
+
+// ══════════════════════════════════════════
 //  CASE CARD COLLAPSE (hide body/settings, keep header)
 // ══════════════════════════════════════════
 const _caseCollapsed = new Set();
@@ -2042,7 +2056,13 @@ function openPreview(id){
 }
 
 function closePreview(){document.getElementById('previewMo').classList.remove('open');_previewId=null;}
-function doPrint(){if(_previewId!==null){closePreview();setTimeout(()=>printRec(_previewId),100);}}
+function doPrint(){
+  if(_previewId===null) return;
+  const id=_previewId;
+  closePreview();
+  // Allow modal close animation then print
+  requestAnimationFrame(()=>requestAnimationFrame(()=>printRec(id)));
+}
 
 // ══════════════════════════════════════════
 //  PRINT
@@ -2075,7 +2095,8 @@ function printRec(id){
     ${afterSection}
     <div class="p-footer"><span>列印時間：${new Date().toLocaleString('zh-TW')}</span><span>${eh(buildCaseNo(rec))} — ${eh(rec.zone||'')}</span></div>
   </div>`;
-  pa.style.display='block';window.print();pa.style.display='none';
+  pa.style.display='block';
+  setTimeout(()=>{ window.print(); pa.style.display='none'; },50);
 }
 
 // ══════════════════════════════════════════
