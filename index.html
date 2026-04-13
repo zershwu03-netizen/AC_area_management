@@ -2041,10 +2041,10 @@ function openPreview(id){
     </tr>`;
   }).join('') : '';
 
-  const infoGrid = [['日期',rec.date],['星期',rec.weekday],['日/夜',rec.shift],['前置',rec.prepare],['刨除',rec.milling],['鋪設',rec.paving]].map(([l,v],i)=>`
+  const infoGrid = [['日期',rec.date,false],['星期',rec.weekday,false],['日/夜',rec.shift,false],['前置',rec.prepare,true],['刨除',rec.milling,false],['鋪設',rec.paving,false]].map(([l,v,red],i)=>`
     <div style="padding:8px 11px;border-right:${i%3===2?'none':'1px solid #cbd5e1'};border-bottom:${i>=3?'none':'1px solid #cbd5e1'}">
       <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:#94a3b8;margin-bottom:2px">${l}</div>
-      <div style="font-size:13px;font-weight:700">${eh(v||'—')}</div>
+      <div style="font-size:13px;font-weight:700;${red?'color:#dc2626':''}">${eh(v||'—')}</div>
     </div>`).join('');
 
   // Diff section
@@ -2172,7 +2172,7 @@ function printRec(id){
       <div class="p-info-item"><div class="p-info-label">日期</div><div class="p-info-val">${eh(rec.date||'—')}</div></div>
       <div class="p-info-item"><div class="p-info-label">星期</div><div class="p-info-val">${eh(rec.weekday||'—')}</div></div>
       <div class="p-info-item"><div class="p-info-label">日 / 夜</div><div class="p-info-val">${eh(rec.shift||'—')}</div></div>
-      <div class="p-info-item"><div class="p-info-label">前置作業</div><div class="p-info-val">${eh(rec.prepare||'—')}</div></div>
+      <div class="p-info-item"><div class="p-info-label">前置作業</div><div class="p-info-val" style="color:#dc2626">${eh(rec.prepare||'—')}</div></div>
       <div class="p-info-item"><div class="p-info-label">刨除時間</div><div class="p-info-val">${eh(rec.milling||'—')}</div></div>
       <div class="p-info-item"><div class="p-info-label">鋪設時間</div><div class="p-info-val">${eh(rec.paving||'—')}</div></div>
     </div>
