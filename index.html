@@ -433,8 +433,9 @@ table.dt tbody tr:last-child td{border-bottom:none;}
 
 
 <!-- Stats Modal -->
-<div class="mo" id="statsMo"><div class="md" style="max-width:440px">
+<div class="mo" id="statsMo"><div class="md" style="max-width:480px">
   <h3>📊 派案統計</h3>
+  <div style="font-size:11px;color:var(--text-dim);margin:-4px 0 6px">依施工日期新→舊排序，可用 ▲▼ 手動調整</div>
   <div style="display:grid;grid-template-columns:1fr auto auto;gap:10px;padding:0 2px 4px">
     <span class="stats-col-hdr">派案</span>
     <span class="stats-col-hdr">面積(m²)</span>
@@ -2189,22 +2190,73 @@ function printRec(id){
 // ══════════════════════════════════════════
 //  STATS MODAL
 // ══════════════════════════════════════════
-function openStatsModal(){
-  const grid=document.getElementById('statsGrid');
-  if(!cases.length){grid.innerHTML='<div style="color:var(--text-dim);font-size:13px;padding:10px">尚無記錄</div>';document.getElementById('statsMo').classList.add('open');return;}
-  const map={};
-  cases.forEach(c=>{
-    const key=buildCaseNo({caseLocation:c.caseLocation,caseNum:c.caseNum})||'未命名';
-    const recs=getCaseRecords(c.id);
-    const area=recs.reduce((s,r)=>s+recTot(r,'area'),0);
-    const tons=recs.reduce((s,r)=>s+recTot(r,'tons'),0);
-    map[key]={name:key,area,tons,count:recs.length};
+function getStatsList() {
+  // Sort by newest record date in each case, fallback to insertion order reversed
+  return [...cases].sort((a, b) => {
+    const recsA = getCaseRecords(a.id);
+    const recsB = getCaseRecords(b.id);
+    const latestA = recsA.length ? recsA.reduce((m,r)=>{ const d=parseDate(r.date); return d&&d>m?d:m; }, new Date(0)) : new Date(0);
+    const latestB = recsB.length ? recsB.reduce((m,r)=>{ const d=parseDate(r.date); return d&&d>m?d:m; }, new Date(0)) : new Date(0);
+    if (latestA.getTime() !== latestB.getTime()) return latestB - latestA; // newest first
+    // Same date or no records: fallback to reverse insertion order
+    return cases.indexOf(b) - cases.indexOf(a);
   });
-  const list=Object.values(map).sort((a,b)=>b.area-a.area);
-  const totArea=list.reduce((s,r)=>s+r.area,0);
-  const totTons=list.reduce((s,r)=>s+r.tons,0);
-  grid.innerHTML=list.map(r=>`<div class="stats-row"><div><div class="stats-row-name">${eh(r.name)}</div><div style="font-size:11px;color:var(--text-dim);margin-top:2px">${r.count} 筆記錄</div></div><div class="stats-row-area">${r.area.toFixed(1)} m²</div><div class="stats-row-tons">${r.tons.toFixed(2)} T</div></div>`).join('')+`<div class="stats-total"><div style="font-size:14px;font-weight:800;color:var(--accent)">合計</div><div class="stats-row-area" style="font-size:15px">${totArea.toFixed(1)} m²</div><div class="stats-row-tons" style="font-size:15px">${totTons.toFixed(2)} T</div></div>`;
+}
+
+function renderStatsGrid() {
+  const grid = document.getElementById('statsGrid');
+  if (!grid) return;
+  const sorted = getStatsList();
+  let totArea = 0, totTons = 0;
+  const rows = sorted.map((c, i) => {
+    const recs = getCaseRecords(c.id);
+    const area = recs.reduce((s,r)=>s+recTot(r,'area'),0);
+    const tons = recs.reduce((s,r)=>s+recTot(r,'tons'),0);
+    
+    totArea += area; totTons += tons;
+    const name = buildCaseNo({caseLocation:c.caseLocation,caseNum:c.caseNum})||'未命名';
+    // Get date range
+    const dates = recs.map(r=>r.date).filter(Boolean).sort();
+    const dateRange = dates.length ? (dates[0]===dates[dates.length-1] ? dates[0] : dates[0]+'～'+dates[dates.length-1]) : '—';
+    return `<div class="stats-row" id="srow-${c.id}">
+      <div style="display:flex;align-items:center;gap:6px;min-width:0">
+        <div style="display:flex;flex-direction:column;gap:1px;flex-shrink:0">
+          <button class="del-row-btn" style="font-size:9px;width:18px;height:18px" onclick="moveStatRow(${c.id},-1)">▲</button>
+          <button class="del-row-btn" style="font-size:9px;width:18px;height:18px" onclick="moveStatRow(${c.id},1)">▼</button>
+        </div>
+        <div style="min-width:0">
+          <div class="stats-row-name">${eh(name)}</div>
+          <div style="font-size:11px;color:var(--text-dim);margin-top:1px">${dateRange}　${recs.length} 筆</div>
+        </div>
+      </div>
+      <div class="stats-row-area">${area.toFixed(1)} m²</div>
+      <div class="stats-row-tons">${tons.toFixed(2)} T</div>
+    </div>`;
+  });
+  grid.innerHTML = rows.join('') + `<div class="stats-total">
+    <div style="font-size:14px;font-weight:800;color:var(--accent)">合計</div>
+    <div class="stats-row-area" style="font-size:15px">${totArea.toFixed(1)} m²</div>
+    <div class="stats-row-tons" style="font-size:15px">${totTons.toFixed(2)} T</div>
+  </div>`;
+}
+
+function moveStatRow(caseId, dir) {
+  const sorted = getStatsList();
+  const idx = sorted.findIndex(c=>c.id===caseId);
+  const newIdx = idx + dir;
+  if (newIdx < 0 || newIdx >= sorted.length) return;
+  // Swap in the original cases array
+  const aIdx = cases.indexOf(sorted[idx]);
+  const bIdx = cases.indexOf(sorted[newIdx]);
+  if (aIdx<0||bIdx<0) return;
+  [cases[aIdx], cases[bIdx]] = [cases[bIdx], cases[aIdx]];
+  saveLocal();
+  renderStatsGrid();
+}
+
+function openStatsModal(){
   document.getElementById('statsMo').classList.add('open');
+  renderStatsGrid();
 }
 function closeStatsMo(){document.getElementById('statsMo').classList.remove('open');}
 
