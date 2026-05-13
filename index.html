@@ -855,7 +855,6 @@ function renderCard(rec, idx=0){
   const col = CARD_COLORS[idx % CARD_COLORS.length];
   return `<div class="record-card${locked?' locked':''}" id="card-${rec.id}" data-id="${rec.id}" style="border-color:${col.border};">
   <div class="record-card-header" style="user-select:none;background:${col.bg};"
-  <div class="record-card-header" style="user-select:none"
     data-id="${rec.id}"
     onpointerdown="startLongPress(event,${rec.id})"
     onpointerup="cancelLongPress()"
@@ -877,6 +876,9 @@ function renderCard(rec, idx=0){
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:12px;height:12px"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
       </div>
       ${!locked ? `<div class="icon-btn del" onclick="event.stopPropagation();askDel(${rec.id})">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:12px;height:12px"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6M10 11v6M14 11v6M9 6V4h6v2"/></svg>
+      </div>` : ''}
+      <div class="icon-btn" onclick="toggle(${rec.id})">
         <svg id="ch-${rec.id}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:12px;height:12px;transition:transform .2s"><polyline points="6 9 12 15 18 9"/></svg>
       </div>
     </div>
