@@ -841,10 +841,20 @@ function matOpts(sel){
     `<option value="" disabled>──────</option><option value="__manage__">⚙ 管理料別…</option>`;
 }
 
-function renderCard(rec){
+const CARD_COLORS = [
+  {border:'#bfdbfe',bg:'#eff6ff',sum:'#dbeafe'},  // 藍
+  {border:'#bbf7d0',bg:'#f0fdf4',sum:'#dcfce7'},  // 綠
+  {border:'#fde68a',bg:'#fffbeb',sum:'#fef3c7'},  // 黃
+  {border:'#fecaca',bg:'#fff1f2',sum:'#ffe4e6'},  // 紅
+  {border:'#e9d5ff',bg:'#faf5ff',sum:'#f3e8ff'},  // 紫
+];
+
+function renderCard(rec, idx=0){
   const ta=recTot(rec,'area'), tt=recTot(rec,'tons'), tm=recTot(rec,'mill');
   const locked = rec.locked || false;
-  return `<div class="record-card${locked?' locked':''}" id="card-${rec.id}" data-id="${rec.id}">
+  const col = CARD_COLORS[idx % CARD_COLORS.length];
+  return `<div class="record-card${locked?' locked':''}" id="card-${rec.id}" data-id="${rec.id}" style="border-color:${col.border};">
+  <div class="record-card-header" style="user-select:none;background:${col.bg};"
   <div class="record-card-header" style="user-select:none"
     data-id="${rec.id}"
     onpointerdown="startLongPress(event,${rec.id})"
@@ -863,15 +873,15 @@ function renderCard(rec){
     </div>
     <div class="record-actions">
       <div class="card-check" id="chk-${rec.id}" onclick="event.stopPropagation();toggleBatchSelect(${rec.id},this)"></div>
+      <div class="icon-btn" onclick="event.stopPropagation();openPreview(${rec.id})" title="列印預覽" style="color:#2563eb;border-color:#bfdbfe;background:#eff6ff;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:12px;height:12px"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+      </div>
       ${!locked ? `<div class="icon-btn del" onclick="event.stopPropagation();askDel(${rec.id})">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:12px;height:12px"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6M10 11v6M14 11v6M9 6V4h6v2"/></svg>
-      </div>` : ''}
-      <div class="icon-btn" onclick="toggle(${rec.id})">
         <svg id="ch-${rec.id}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:12px;height:12px;transition:transform .2s"><polyline points="6 9 12 15 18 9"/></svg>
       </div>
     </div>
   </div>
-  <div class="card-summary" id="cs-${rec.id}" onclick="event.stopPropagation()">
+  <div class="card-summary" id="cs-${rec.id}" onclick="event.stopPropagation()" style="background:${col.sum};">
     <div style="width:100%;font-size:17px;font-weight:800;color:#1e293b;margin-bottom:7px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:.3px;" id="tz-${rec.id}">${eh(rec.zone||'未填工區路段')}</div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:7px;padding-bottom:7px;border-bottom:1px dashed var(--border)">
       ${rec.prepare||rec.milling||rec.paving ? `
@@ -1393,7 +1403,7 @@ function renderCaseBigCard(c) {
 
     <!-- Records inside this case -->
     <div class="case-records" id="recs-${cid}">
-      ${recs.map(r=>renderCard(r)).join('')}
+      ${recs.map((r,i)=>renderCard(r,i)).join('')}
       <div style="padding:8px 10px">
         <button class="add-row-btn" style="border-color:var(--accent);color:var(--accent)" onclick="addRecordToCase(${c.id})">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:13px;height:13px"><path d="M12 5v14M5 12h14"/></svg>新增施工記錄
