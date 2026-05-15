@@ -2550,6 +2550,16 @@ function doReport(){
     tbodiesHtml += `<tbody style="page-break-inside:avoid;break-inside:avoid;">${tbodyHtml}</tbody>`;
   });
 
+  // 純文字摘要（放最下面）
+  const textSummary = selRecs.map(r => {
+    const dateStr = r.date ? r.date.replace(/^\d+\//, '') : '—';
+    const wday = r.weekday ? `(${r.weekday})` : '';
+    const mill = r.milling ? `${timePeriod(r.milling)}${r.milling}刨除` : '';
+    const pave = r.paving  ? `${timePeriod(r.paving)}${r.paving}鋪設`  : '';
+    const stay = r.paving  ? `${timePeriod(calcReportTime(r.paving,-2))}${calcReportTime(r.paving,-2)}駐廠` : '';
+    return `${dateStr}${wday}　${[mill,pave,stay].filter(Boolean).join('　')}`;
+  }).join('\n');
+
   const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
   <style>
     @page{size:A4 landscape;margin:12mm;}
@@ -2564,6 +2574,9 @@ function doReport(){
     thead th{padding:10px 6px;text-align:center;font-size:13px;font-weight:700;letter-spacing:.5px;white-space:nowrap;}
     thead th.left{text-align:left;padding-left:8px;}
     tbody{page-break-inside:avoid;break-inside:avoid;}
+    .text-summary{margin-top:18px;border-top:2px solid #e2e8f0;padding-top:14px;page-break-inside:avoid;break-inside:avoid;}
+    .text-summary-title{font-size:14px;font-weight:800;color:#1e3a6e;margin-bottom:8px;letter-spacing:.5px;}
+    .text-summary-body{font-size:15px;color:#334155;line-height:2.3;white-space:pre-line;background:#f8fafc;border-left:4px solid #1e3a6e;padding:10px 14px;border-radius:0 6px 6px 0;}
   </style>
   </head><body>
   <div class="report-header">
@@ -2582,6 +2595,10 @@ function doReport(){
     </tr></thead>
     ${tbodiesHtml}
   </table>
+  <div class="text-summary">
+    <div class="text-summary-title">📋 進場時間摘要</div>
+    <div class="text-summary-body">${textSummary}</div>
+  </div>
   </body></html>`;
 
   closeReportMo();
