@@ -374,8 +374,8 @@ table.dt tbody tr:last-child td{border-bottom:none;}
     </div>
     <div class="batch-bar-right">
       <button class="btn" style="background:rgba(255,255,255,.15);color:#fff;font-size:12px;padding:6px 12px" onclick="selectAllBatch()">全選</button>
-      <select id="batchCaseSel" style="background:rgba(255,255,255,.15);color:#fff;font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.3);font-family:var(--font);cursor:pointer;max-width:140px" onchange="selectCaseBatch(this.value)">
-        <option value="">選派案全選…</option>
+      <select id="batchCaseSel" style="background:#1e3a6e;color:#fff;font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.4);font-family:var(--font);cursor:pointer;max-width:150px" onchange="selectCaseBatch(this.value)">
+        <option value="" style="background:#1e3a6e;color:#fff">選派案全選…</option>
       </select>
       <button class="btn" style="background:#fff;color:#1e3a6e;font-size:12px;padding:6px 12px;font-weight:700" onclick="doBatchPrint()">列印</button>
       <button class="btn" style="background:rgba(255,255,255,.15);color:#fff;font-size:12px;padding:6px 12px" onclick="exitBatchMode()">取消</button>
@@ -1293,7 +1293,7 @@ function getFiltered() {
 
 function getCaseRecords(caseId) {
   return records
-    .filter(r => r.caseId === caseId)
+    .filter(r => r.caseId == caseId)
     .sort((a,b) => {
       const da=parseDate(a.date), db=parseDate(b.date);
       return (da?da.getTime():0) - (db?db.getTime():0);
@@ -2025,12 +2025,12 @@ function enterBatchMode(){
   // 填充派案下拉（只顯示有未完工記錄的派案）
   const sel=document.getElementById('batchCaseSel');
   if(sel){
-    sel.innerHTML='<option value="">選派案全選…</option>'+
+    sel.innerHTML='<option value="" style="background:#1e3a6e;color:#fff">選派案全選…</option>'+
       cases.map(c=>{
         const recs=getCaseRecords(c.id).filter(r=>!r.locked);
         if(!recs.length) return '';
         const name=(c.caseLocation||'')+'第'+(c.caseNum||'?')+'派案';
-        return `<option value="${c.id}">${name}（${recs.length}筆）</option>`;
+        return `<option value="${c.id}" style="background:#fff;color:#1e293b">${name}（${recs.length}筆）</option>`;
       }).join('');
     sel.value='';
   }
@@ -2059,7 +2059,7 @@ function selectCaseBatch(caseId){
   // 先清除所有勾選
   batchSelected.clear();
   document.querySelectorAll('.card-check').forEach(el=>el.classList.remove('checked'));
-  // 選該派案未完工的記錄
+  // 強制轉數字，確保與 cases[].id 型別一致
   const cid=+caseId;
   getCaseRecords(cid).filter(r=>!r.locked).forEach(rec=>{
     batchSelected.add(rec.id);
