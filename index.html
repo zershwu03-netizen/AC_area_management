@@ -2496,16 +2496,6 @@ function doReport(){
   const selRecs = getCaseRecords(caseId).filter(r=>selIds.has(r.id));
   const caseName = (c.caseLocation||'') + '第' + (c.caseNum||'') + '派案';
 
-  // 抬頭
-  const headerLines = selRecs.map(r => {
-    const dateStr = r.date ? r.date.replace(/^\d+\//, '') : '—';
-    const wday = r.weekday ? `(${r.weekday})` : '';
-    const mill = r.milling ? `${timePeriod(r.milling)}${r.milling}刨除` : '';
-    const pave = r.paving  ? `${timePeriod(r.paving)}${r.paving}鋪設`  : '';
-    const stay = r.paving  ? `${timePeriod(calcReportTime(r.paving,-2))}${calcReportTime(r.paving,-2)}駐廠` : '';
-    return `${dateStr}${wday}　${[mill,pave,stay].filter(Boolean).join('　')}`;
-  }).join('\n');
-
   const DAY_COLORS = [
     {bg:'#eff6ff',stripe:'#dbeafe',sub:'#bfdbfe',text:'#1e40af'},
     {bg:'#f0fdf4',stripe:'#dcfce7',sub:'#86efac',text:'#166534'},
@@ -2514,9 +2504,7 @@ function doReport(){
     {bg:'#fff1f2',stripe:'#ffe4e6',sub:'#fecaca',text:'#991b1b'},
   ];
 
-  // 每天一個 <tbody> 包住，讓整天不被分頁截斷
   let tbodiesHtml = '';
-  let grandArea = 0, grandTons = 0;
 
   selRecs.forEach((r, recIdx) => {
     const col = DAY_COLORS[recIdx % DAY_COLORS.length];
@@ -2528,22 +2516,17 @@ function doReport(){
     const stay = r.paving  ? `${timePeriod(calcReportTime(r.paving,-2))}${calcReportTime(r.paving,-2)}駐廠` : '';
     const timeLabel = [mill,pave,stay].filter(Boolean).join('　');
 
-    let tbodyHtml = '';
-
-    // 日期標題列
-    tbodyHtml += `<tr>
+    let tbodyHtml = `<tr>
       <td colspan="8" style="background:${col.sub};color:${col.text};font-size:14px;font-weight:800;padding:9px 12px;border-top:3px solid ${col.text}20;">
         📅 ${dateStr}${wday}　${shiftIcon}　${timeLabel}
       </td>
     </tr>`;
 
-    // 路段列
     let dayArea = 0, dayTons = 0;
     (r.rows||[]).forEach((row, rowIdx) => {
       const a = +row.area||0, t = row.thickness||'';
       const tons = a&&t ? +calcTons(a,t) : 0;
       dayArea += a; dayTons += tons;
-      grandArea += a; grandTons += tons;
       const bg = rowIdx%2===0 ? col.bg : col.stripe;
       tbodyHtml += `<tr style="background:${bg}">
         <td style="text-align:center;padding:6px 6px;border-bottom:1px solid #e2e8f0;font-size:13px">${eh(row.village||'')}</td>
@@ -2557,7 +2540,6 @@ function doReport(){
       </tr>`;
     });
 
-    // 當日合計列
     tbodyHtml += `<tr style="background:${col.sub}">
       <td colspan="4" style="text-align:right;padding:7px 12px;font-size:13px;font-weight:800;color:${col.text}">合計</td>
       <td style="text-align:center;padding:7px 6px;font-size:14px;font-weight:900;color:${col.text}">${dayArea.toFixed(1)}</td>
@@ -2565,17 +2547,8 @@ function doReport(){
       <td colspan="2"></td>
     </tr>`;
 
-    // 每天用獨立 tbody 包住，page-break-inside:avoid 讓整天不被截斷
     tbodiesHtml += `<tbody style="page-break-inside:avoid;break-inside:avoid;">${tbodyHtml}</tbody>`;
   });
-
-  // 總計 tbody
-  tbodiesHtml += `<tbody><tr style="background:#1e3a6e">
-    <td colspan="4" style="text-align:right;padding:9px 12px;font-size:14px;font-weight:800;color:#fff">總計</td>
-    <td style="text-align:center;padding:9px 6px;font-size:15px;font-weight:900;color:#fff">${grandArea.toFixed(1)}</td>
-    <td style="text-align:center;padding:9px 6px;font-size:15px;font-weight:900;color:#fff">${grandTons.toFixed(2)}</td>
-    <td colspan="2" style="color:#93c5fd;font-size:12px;text-align:center;padding:9px 6px">m² / T</td>
-  </tr></tbody>`;
 
   const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
   <style>
@@ -2583,9 +2556,8 @@ function doReport(){
     html{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
     *{box-sizing:border-box;margin:0;padding:0;}
     body{font-family:'Microsoft YaHei','PingFang TC','Noto Sans TC',sans-serif;color:#1e293b;background:#fff;}
-    .report-header{margin-bottom:16px;border-bottom:3px solid #1e3a6e;padding-bottom:12px;}
-    .report-title{font-size:26px;font-weight:900;color:#1e3a6e;letter-spacing:1px;margin-bottom:10px;}
-    .report-timeline{font-size:15px;color:#334155;line-height:2.2;white-space:pre-line;background:#f8fafc;border-left:4px solid #1e3a6e;padding:10px 14px;border-radius:0 6px 6px 0;}
+    .report-header{margin-bottom:14px;border-bottom:3px solid #1e3a6e;padding-bottom:10px;}
+    .report-title{font-size:26px;font-weight:900;color:#1e3a6e;letter-spacing:1px;}
     table{width:100%;border-collapse:collapse;}
     thead{display:table-header-group;}
     thead tr{background:#1e3a6e;color:#fff;}
@@ -2596,7 +2568,6 @@ function doReport(){
   </head><body>
   <div class="report-header">
     <div class="report-title">🏗️ ${caseName} 進場施工報告</div>
-    <div class="report-timeline">${headerLines}</div>
   </div>
   <table>
     <thead><tr>
