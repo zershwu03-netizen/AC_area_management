@@ -341,6 +341,10 @@ table.dt tbody tr:last-child td{border-bottom:none;}
       <div class="val" style="font-size:22px">🖨️</div>
       <div class="lbl" style="color:#1e3a6e">批次列印</div>
     </div>
+    <div class="stat-chip" onclick="openReportMo()" style="cursor:pointer;border-color:#16a34a;background:#f0fdf4">
+      <div class="val" style="font-size:22px">📋</div>
+      <div class="lbl" style="color:#16a34a">進場報告</div>
+    </div>
   </div>
 
   <div class="offline-banner" id="offlineBanner">
@@ -463,6 +467,35 @@ table.dt tbody tr:last-child td{border-bottom:none;}
   <div class="stats-grid" id="statsGrid"></div>
   <div class="md-actions"><button class="btn btn-ghost" onclick="closeStatsMo()">關閉</button></div>
 </div></div>
+<!-- Report Modal -->
+<div class="mo" id="reportMo" style="align-items:flex-start;padding:0;overflow-y:auto">
+  <div class="md" style="max-width:560px;width:100%;margin:20px auto;max-height:none">
+    <h3>📋 進場報告</h3>
+    <div style="font-size:12px;color:var(--text-dim);margin-top:-6px">選擇派案後勾選要包含的施工記錄</div>
+
+    <!-- 派案選擇 -->
+    <div class="fg" style="margin-top:4px">
+      <div class="fl">選擇派案</div>
+      <div class="sw"><select class="fs" id="reportCaseSel" onchange="onReportCaseChange(this.value)">
+        <option value="">請選擇派案…</option>
+      </select></div>
+    </div>
+
+    <!-- 施工記錄勾選清單 -->
+    <div id="reportRecList" style="display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:8px;background:var(--surface2)">
+      <div style="color:var(--text-dim);font-size:12px;text-align:center;padding:12px">請先選擇派案</div>
+    </div>
+
+    <div class="md-actions" style="margin-top:8px">
+      <button class="btn btn-ghost" onclick="closeReportMo()">取消</button>
+      <button class="btn btn-success" onclick="doReport()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:13px;height:13px"><path d="M6 9l6 6 6-6"/></svg>
+        產生報告
+      </button>
+    </div>
+  </div>
+</div>
+
 
 <!-- Context Menu -->
 <div class="ctx-overlay" id="ctxOverlay" onclick="closeCtx()"></div>
@@ -949,7 +982,7 @@ function renderCard(rec, idx=0){
       <div class="tbl-wrap"><table class="dt">
         <thead><tr>
           <th style="width:20px"></th>
-          <th style="width:30px">順序</th><th>施工路段</th>
+          <th style="width:30px">順序</th><th style="width:56px">里別</th><th>施工路段</th>
           <th style="width:60px">面積(m²)</th><th style="width:56px">厚度(cm)</th>
           <th style="width:60px">噸數(T)</th><th style="width:64px">刨除(-0.5)</th>
           <th style="width:44px">告示牌</th>
@@ -959,7 +992,7 @@ function renderCard(rec, idx=0){
         <tfoot>
           <tr class="total-row">
             <td></td>
-            <td colspan="2" style="text-align:right;padding-right:6px;font-size:10px;color:var(--text-dim)">小計</td>
+            <td colspan="3" style="text-align:right;padding-right:6px;font-size:10px;color:var(--text-dim)">小計</td>
             <td id="ta-${rec.id}">${n(ta,1)}</td>
             <td style="font-size:10px;color:var(--text-dim)">總噸數(T)</td>
             <td id="tt-${rec.id}">${n(tt)}</td>
@@ -969,7 +1002,7 @@ function renderCard(rec, idx=0){
           </tr>
           <tr class="summary-row">
             <td></td>
-            <td colspan="2" style="color:var(--text-dim);font-size:10px">總面積(m²)</td>
+            <td colspan="3" style="color:var(--text-dim);font-size:10px">總面積(m²)</td>
             <td id="sa-${rec.id}" style="color:var(--accent2)">${n(ta,1)}</td>
             <td style="color:var(--text-dim);font-size:10px">總噸數(T)</td>
             <td id="st-${rec.id}" style="color:var(--accent2)">${n(tt)}</td>
@@ -1047,6 +1080,7 @@ function renderRow(rec,row,idx){
       </div>
     </td>
     <td><div class="cr">${idx+1}</div></td>
+    <td><input class="ci" value="${ea(row.village||'')}" oninput="urf(${rec.id},${row.id},'village',this.value)" placeholder="里別" style="min-width:44px;max-width:56px"></td>
     <td><input class="ci seg" value="${ea(row.segment||'')}" oninput="urf(${rec.id},${row.id},'segment',this.value)" placeholder="路段名稱"></td>
     <td><input class="ci" type="number" step="0.1" value="${a||''}" oninput="urA(${rec.id},${row.id},this)" placeholder="0"></td>
     <td><input class="ci" type="number" step="0.5" value="${ea(t)}" oninput="urT(${rec.id},${row.id},this.value)" placeholder="cm"></td>
@@ -1133,7 +1167,7 @@ function addRecordToCase(caseId) {
     zone:'',
     material: last ? last.material : (materials[0]||''),
     bento: '',
-    rows:[{id:nid+1,segment:'',area:0,thickness: last&&last.rows[0] ? last.rows[0].thickness : '',signs:''}]
+    rows:[{id:nid+1,segment:'',area:0,thickness: last&&last.rows[0] ? last.rows[0].thickness : '',signs:'',village:''}]
   };
   records.push(rec);
   persistRecord(rec);
@@ -1898,7 +1932,7 @@ function updTots(rId) {
 function addRow(recId) {
   const rec=gr(recId); if(!rec) return;
   const nid=Date.now();
-  rec.rows.push({id:nid,segment:'',area:0,thickness:'',signs:''});
+  rec.rows.push({id:nid,segment:'',area:0,thickness:'',signs:'',village:''});
   const tbody=document.getElementById(`tb-${recId}`);
   if(tbody){
     const tr=document.createElement('tr'); tr.id=`tr-${recId}-${nid}`;
@@ -2376,6 +2410,190 @@ function openStatsModal(){
   renderStatsGrid();
 }
 function closeStatsMo(){document.getElementById('statsMo').classList.remove('open');}
+// ══════════════════════════════════════════
+//  REPORT MODAL
+// ══════════════════════════════════════════
+function openReportMo(){
+  const sel = document.getElementById('reportCaseSel');
+  sel.innerHTML = '<option value="">請選擇派案…</option>' +
+    cases.map(c => {
+      const recs = getCaseRecords(c.id);
+      if(!recs.length) return '';
+      const name = (c.caseLocation||'') + '第' + (c.caseNum||'?') + '派案';
+      return `<option value="${c.id}">${name}</option>`;
+    }).join('');
+  sel.value = '';
+  document.getElementById('reportRecList').innerHTML = '<div style="color:var(--text-dim);font-size:12px;text-align:center;padding:12px">請先選擇派案</div>';
+  document.getElementById('reportMo').classList.add('open');
+}
+function closeReportMo(){ document.getElementById('reportMo').classList.remove('open'); }
+
+function onReportCaseChange(caseId){
+  const list = document.getElementById('reportRecList');
+  if(!caseId){ list.innerHTML='<div style="color:var(--text-dim);font-size:12px;text-align:center;padding:12px">請先選擇派案</div>'; return; }
+  const recs = getCaseRecords(+caseId);
+  if(!recs.length){ list.innerHTML='<div style="color:var(--text-dim);font-size:12px;text-align:center;padding:12px">此派案尚無施工記錄</div>'; return; }
+  list.innerHTML = recs.map(r => {
+    const shiftIcon = r.shift==='日間'?'☀️':'🌙';
+    const mill = calcReportTime(r.milling, -2); // 駐廠 = 鋪設-2h，先算給預覽
+    return `<label style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--surface);border:1px solid var(--border);border-radius:7px;cursor:pointer;user-select:none">
+      <input type="checkbox" data-rid="${r.id}" style="width:16px;height:16px;accent-color:var(--accent);flex-shrink:0" checked>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:700;color:var(--text)">${eh(r.date||'—')} ${r.weekday?'('+r.weekday+')':''} ${shiftIcon}</div>
+        <div style="font-size:12px;color:var(--text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${eh(r.zone||'未填工區')}</div>
+        ${r.milling||r.paving?`<div style="font-size:11px;color:var(--accent)">刨 ${r.milling||'—'} 鋪 ${r.paving||'—'} 駐 ${calcReportTime(r.paving,-2)||'—'}</div>`:''}
+      </div>
+    </label>`;
+  }).join('');
+}
+
+// 時間加減：HH:MM 格式加 delta 小時
+function calcReportTime(hhmm, deltaH){
+  if(!hhmm) return '';
+  const m = hhmm.match(/^(\d{1,2}):(\d{2})$/);
+  if(!m) return '';
+  let h = +m[1] + deltaH, min = +m[2];
+  if(h < 0) h += 24;
+  if(h >= 24) h -= 24;
+  return String(h).padStart(2,'0') + ':' + String(min).padStart(2,'0');
+}
+
+// 時間轉中文描述
+function timeToText(hhmm){
+  if(!hhmm) return '—';
+  const m = hhmm.match(/^(\d{1,2}):(\d{2})$/);
+  if(!m) return hhmm;
+  let h = +m[1], min = +m[2];
+  const period = h < 12 ? '早上' : h < 13 ? '中午' : h < 18 ? '下午' : '晚上';
+  if(h > 12) h -= 12;
+  if(h === 0) h = 12;
+  const minStr = min === 0 ? '' : (min === 30 ? '半' : `${min}分`);
+  return `${period}${h}點${minStr}`;
+}
+
+function doReport(){
+  const caseId = +document.getElementById('reportCaseSel').value;
+  if(!caseId){ showToast('請先選擇派案','error'); return; }
+  const c = cases.find(x=>x.id==caseId);
+  if(!c){ showToast('找不到派案','error'); return; }
+
+  // 取勾選的記錄
+  const checked = [...document.querySelectorAll('#reportRecList input[type=checkbox]:checked')];
+  if(!checked.length){ showToast('請至少勾選一筆記錄','error'); return; }
+  const selIds = new Set(checked.map(el=>+el.dataset.rid));
+  const selRecs = getCaseRecords(caseId).filter(r=>selIds.has(r.id));
+
+  const caseName = (c.caseLocation||'') + '第' + (c.caseNum||'') + '派案';
+
+  // 抬頭文字：每筆記錄一行
+  const headerLines = selRecs.map(r => {
+    const dateStr = r.date ? r.date.replace(/^\d+\//, m => '') : '—'; // 去掉年份
+    const wday = r.weekday ? `(${r.weekday})` : '';
+    const mill = r.milling ? timeToText(r.milling)+'刨' : '';
+    const pave = r.paving  ? timeToText(r.paving)+'鋪'  : '';
+    const stay = r.paving  ? timeToText(calcReportTime(r.paving,-2))+'駐廠' : '';
+    const timeStr = [mill, pave, stay].filter(Boolean).join(' ');
+    const shiftStr = r.shift==='日間'?'日間':'晚上';
+    return `${dateStr}${wday} ${shiftStr}${timeStr}`;
+  }).join('\n');
+
+  // 表格列：每筆記錄的每個路段各一列
+  const rows = [];
+  selRecs.forEach(r => {
+    (r.rows||[]).forEach(row => {
+      const a = +row.area||0, t = row.thickness||'';
+      const tons = a&&t ? calcTons(a,t).toFixed(2) : '—';
+      rows.push({
+        village: eh(row.village||''),
+        segment: eh(row.segment||''),
+        date: eh(r.date||''),
+        shift: r.shift==='日間'?'日間':'夜間',
+        area: a ? a.toString() : '—',
+        tons: tons,
+        material: eh(r.material||''),
+        thickness: t ? t+'cm' : '—',
+      });
+    });
+  });
+
+  // 建立 HTML
+  const rowsHtml = rows.map((row,i) => `
+    <tr style="background:${i%2===0?'#fff':'#f8fafc'}">
+      <td style="text-align:center;padding:7px 6px;border-bottom:1px solid #e2e8f0">${row.village}</td>
+      <td style="padding:7px 8px;border-bottom:1px solid #e2e8f0">${row.segment}</td>
+      <td style="text-align:center;padding:7px 6px;border-bottom:1px solid #e2e8f0;white-space:nowrap">${row.date}</td>
+      <td style="text-align:center;padding:7px 6px;border-bottom:1px solid #e2e8f0;white-space:nowrap">${row.shift}</td>
+      <td style="text-align:center;padding:7px 6px;border-bottom:1px solid #e2e8f0">${row.area}</td>
+      <td style="text-align:center;padding:7px 6px;border-bottom:1px solid #e2e8f0">${row.tons}</td>
+      <td style="text-align:center;padding:7px 6px;border-bottom:1px solid #e2e8f0">${row.material}</td>
+      <td style="text-align:center;padding:7px 6px;border-bottom:1px solid #e2e8f0">${row.thickness}</td>
+    </tr>`).join('');
+
+  const totalArea = rows.reduce((s,r)=>s+(parseFloat(r.area)||0),0);
+  const totalTons = rows.reduce((s,r)=>s+(parseFloat(r.tons)||0),0);
+
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <style>
+    @page{size:A4 landscape;margin:12mm;}
+    html{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Microsoft YaHei','PingFang TC','Noto Sans TC',sans-serif;color:#1e293b;background:#fff;font-size:13px;}
+    .report-header{margin-bottom:14px;border-bottom:3px solid #1e3a6e;padding-bottom:10px;}
+    .report-title{font-size:22px;font-weight:900;color:#1e3a6e;letter-spacing:1px;}
+    .report-subtitle{font-size:13px;color:#334155;margin-top:6px;white-space:pre-line;line-height:1.8;}
+    table{width:100%;border-collapse:collapse;}
+    thead tr{background:#1e3a6e;color:#fff;}
+    thead th{padding:9px 6px;text-align:center;font-size:13px;font-weight:700;letter-spacing:.5px;white-space:nowrap;}
+    thead th.left{text-align:left;}
+    tbody td{font-size:13px;}
+    .total-row{background:#eff6ff !important;font-weight:700;color:#1e40af;}
+    .total-row td{padding:8px 6px;border-top:2px solid #bfdbfe;}
+  </style>
+  </head><body>
+  <div class="report-header">
+    <div class="report-title">🏗️ ${caseName} 進場施工報告</div>
+    <div class="report-subtitle">${headerLines}</div>
+  </div>
+  <table>
+    <thead><tr>
+      <th style="width:56px">里別</th>
+      <th class="left" style="min-width:160px">施工路段</th>
+      <th style="width:88px">施作日期</th>
+      <th style="width:56px">日/夜</th>
+      <th style="width:72px">面積(m²)</th>
+      <th style="width:72px">噸數(T)</th>
+      <th style="width:80px">材料</th>
+      <th style="width:56px">厚度</th>
+    </tr></thead>
+    <tbody>
+      ${rowsHtml}
+      <tr class="total-row">
+        <td colspan="4" style="text-align:right;padding:8px 10px">合計</td>
+        <td style="text-align:center;padding:8px 6px">${totalArea.toFixed(1)}</td>
+        <td style="text-align:center;padding:8px 6px">${totalTons.toFixed(2)}</td>
+        <td colspan="2"></td>
+      </tr>
+    </tbody>
+  </table>
+  </body></html>`;
+
+  closeReportMo();
+
+  // 用 iframe 列印
+  let ifrm = document.getElementById('_reportFrame');
+  if(!ifrm){
+    ifrm = document.createElement('iframe');
+    ifrm.id = '_reportFrame';
+    ifrm.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:0;height:0;border:none;';
+    document.body.appendChild(ifrm);
+  }
+  ifrm.srcdoc = html;
+  ifrm.onload = () => {
+    try{ ifrm.contentWindow.focus(); ifrm.contentWindow.print(); } catch(e){ window.print(); }
+    showToast(`進場報告已列印 ✓`, 'success');
+  };
+}
+
 
 // ══════════════════════════════════════════
 //  MATERIAL MODAL
@@ -2434,9 +2652,9 @@ let toastT;
 function showToast(msg,type=''){const t=document.getElementById('toast');t.textContent=msg;t.className=`toast show ${type}`;clearTimeout(toastT);toastT=setTimeout(()=>t.className='toast',2500);}
 
 // Modal click-outside
-['matMo','delMo','statsMo','locMo','newCaseMo'].forEach(id=>{
+['matMo','delMo','statsMo','locMo','newCaseMo','reportMo'].forEach(id=>{
   document.getElementById(id).addEventListener('click',function(e){
-    if(e.target===this){if(this.id==='matMo')closeMatMo();else if(this.id==='delMo')closeDelMo();else if(this.id==='locMo')closeLocMo();else if(this.id==='newCaseMo')closeNewCaseMo();else closeStatsMo();}
+    if(e.target===this){if(this.id==='matMo')closeMatMo();else if(this.id==='delMo')closeDelMo();else if(this.id==='locMo')closeLocMo();else if(this.id==='newCaseMo')closeNewCaseMo();else if(this.id==='reportMo')closeReportMo();else closeStatsMo();}
   });
 });
 document.getElementById('previewMo').addEventListener('click',e=>{if(e.target===e.currentTarget)closePreview();});
