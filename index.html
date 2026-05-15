@@ -374,6 +374,9 @@ table.dt tbody tr:last-child td{border-bottom:none;}
     </div>
     <div class="batch-bar-right">
       <button class="btn" style="background:rgba(255,255,255,.15);color:#fff;font-size:12px;padding:6px 12px" onclick="selectAllBatch()">全選</button>
+      <select id="batchCaseSel" style="background:rgba(255,255,255,.15);color:#fff;font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.3);font-family:var(--font);cursor:pointer;max-width:140px" onchange="selectCaseBatch(this.value)">
+        <option value="">選派案全選…</option>
+      </select>
       <button class="btn" style="background:#fff;color:#1e3a6e;font-size:12px;padding:6px 12px;font-weight:700" onclick="doBatchPrint()">列印</button>
       <button class="btn" style="background:rgba(255,255,255,.15);color:#fff;font-size:12px;padding:6px 12px" onclick="exitBatchMode()">取消</button>
     </div>
@@ -2019,12 +2022,26 @@ function enterBatchMode(){
   document.getElementById('batchBar').classList.add('show');
   document.getElementById('batchCount').textContent='已選 0 筆';
   document.querySelectorAll('.card-check').forEach(el=>el.classList.add('show'));
-  showToast('點選卡片勾選，再按列印','');
+  // 填充派案下拉（只顯示有未完工記錄的派案）
+  const sel=document.getElementById('batchCaseSel');
+  if(sel){
+    sel.innerHTML='<option value="">選派案全選…</option>'+
+      cases.map(c=>{
+        const recs=getCaseRecords(c.id).filter(r=>!r.locked);
+        if(!recs.length) return '';
+        const name=(c.caseLocation||'')+'第'+(c.caseNum||'?')+'派案';
+        return `<option value="${c.id}">${name}（${recs.length}筆）</option>`;
+      }).join('');
+    sel.value='';
+  }
+  showToast('點選卡片勾選，或用下拉選擇派案','');
 }
 function exitBatchMode(){
   batchMode=false;batchSelected.clear();
   document.getElementById('batchBar').classList.remove('show');
   document.querySelectorAll('.card-check').forEach(el=>el.classList.remove('show','checked'));
+  const sel=document.getElementById('batchCaseSel');
+  if(sel) sel.value='';
 }
 function toggleBatchSelect(id,el){
   if(!batchMode) return;
@@ -2033,10 +2050,29 @@ function toggleBatchSelect(id,el){
   document.getElementById('batchCount').textContent=`已選 ${batchSelected.size} 筆`;
 }
 function selectAllBatch(){
-  records.forEach(rec=>{batchSelected.add(rec.id);const el=document.getElementById(`chk-${rec.id}`);if(el)el.classList.add('checked');});
+  // 全選：只選未完工的記錄
+  records.filter(r=>!r.locked).forEach(rec=>{batchSelected.add(rec.id);const el=document.getElementById(`chk-${rec.id}`);if(el)el.classList.add('checked');});
   document.getElementById('batchCount').textContent=`已選 ${batchSelected.size} 筆`;
 }
+function selectCaseBatch(caseId){
+  if(!caseId) return;
+  // 先清除所有勾選
+  batchSelected.clear();
+  document.querySelectorAll('.card-check').forEach(el=>el.classList.remove('checked'));
+  // 選該派案未完工的記錄
+  const cid=+caseId;
+  getCaseRecords(cid).filter(r=>!r.locked).forEach(rec=>{
+    batchSelected.add(rec.id);
+    const el=document.getElementById(`chk-${rec.id}`);
+    if(el) el.classList.add('checked');
+  });
+  document.getElementById('batchCount').textContent=`已選 ${batchSelected.size} 筆`;
+  // 重置下拉顯示
+  setTimeout(()=>{const sel=document.getElementById('batchCaseSel');if(sel)sel.value='';},200);
+}
 function buildRecHtml(rec){
+  const caseObj=cases.find(c=>c.id===rec.caseId)||{};
+  const caseName=(caseObj.caseLocation||rec.caseLocation||'')+(caseObj.caseNum?`第${caseObj.caseNum}派案`:'');
   const ta=recTot(rec,'area'),tt=recTot(rec,'tons'),tm=recTot(rec,'mill');
   const signTot=rec.rows.reduce((s,r)=>s+(+r.signs||0),0);
   const rowsHtml=rec.rows.map((row,i)=>{const a=+row.area||0,t=row.thickness||'';const tons=a&&t?calcTons(a,t).toFixed(2):'—';const mill=a&&t?calcMill(a,t).toFixed(2):'—';const sg=+row.signs||0;
