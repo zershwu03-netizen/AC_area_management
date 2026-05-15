@@ -922,7 +922,7 @@ function renderCard(rec, idx=0){
     </div>
     <div class="fg"><div class="fl">工區路段</div><input class="fi" value="${ea(rec.zone)}" oninput="uf(${rec.id},'zone',this.value)" placeholder="路段名稱"></div>
     <div class="info-grid-3">
-      <div class="fg"><div class="fl">日期</div><input class="fi" value="${ea(rec.date)}" oninput="uDate(${rec.id},this.value)" onblur="validateDate(this)" placeholder="115/04/08"></div>
+      <div class="fg"><div class="fl">日期</div><input class="fi" value="${ea(rec.date)}" oninput="uDateRaw(${rec.id},this.value)" onblur="uDateBlur(${rec.id},this)" placeholder="115/04/08"></div>
       <div class="fg"><div class="fl">星期（自動）</div><input class="fi" id="wi-${rec.id}" value="${ea(rec.weekday)}" readonly></div>
       <div class="fg"><div class="fl">日 / 夜</div>
         <div class="shift-toggle">
@@ -1359,9 +1359,6 @@ function renderCaseBigCard(c) {
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
-          <button class="btn-print" style="padding:4px 10px;font-size:12px;border-radius:7px;" onclick="event.stopPropagation();openCasePreview(${c.id})" title="列印預覽">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-          </button>
         <div class="icon-btn danger-hover" onclick="event.stopPropagation();askDelCase(${c.id})" title="刪除派案" style="border-color:#fecaca;color:#dc2626">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:12px;height:12px"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
         </div>
@@ -1795,6 +1792,40 @@ function uDate(id, val) {
   const di=document.querySelector(`#bd-${id} .fi[oninput*="uDate"]`); if(di) di.value=normed;
 }
 
+// 輸入中：只更新星期（不自動補零），不干擾輸入
+function uDateRaw(id, val) {
+  const rec = gr(id); if (!rec) return;
+  rec.date = val;
+  const wday = weekday(val);
+  rec.weekday = wday;
+  const td=document.getElementById(`td-${id}`); if(td) td.textContent=val||'--';
+  const tw=document.getElementById(`tw-${id}`); if(tw) tw.textContent=wday;
+  const wi=document.getElementById(`wi-${id}`); if(wi) wi.value=wday;
+  persistRecord(rec);
+}
+
+// 離開欄位：補零並驗證
+function uDateBlur(id, input) {
+  const val = input.value.trim();
+  if (!val) return;
+  const normed = normDate(val) || val;
+  const m = normed.match(/^(\d{2,3})\/(\d{2})\/(\d{2})$/);
+  if (!m) {
+    input.style.borderColor='#dc2626';
+    input.title='日期格式錯誤，請輸入 YYY/MM/DD（如 115/04/08）';
+    return;
+  }
+  input.style.borderColor=''; input.title='';
+  input.value = normed;
+  const rec = gr(id); if (!rec) return;
+  const wday = weekday(normed);
+  rec.date = normed; rec.weekday = wday;
+  const td=document.getElementById(`td-${id}`); if(td) td.textContent=normed||'--';
+  const tw=document.getElementById(`tw-${id}`); if(tw) tw.textContent=wday;
+  const wi=document.getElementById(`wi-${id}`); if(wi) wi.value=wday;
+  persistRecord(rec);
+}
+
 function uShift(id, val, btn) {
   const rec = gr(id); if (!rec) return;
   rec.shift = val; persistRecord(rec);
@@ -2010,7 +2041,7 @@ function buildRecHtml(rec){
   const signTot=rec.rows.reduce((s,r)=>s+(+r.signs||0),0);
   const rowsHtml=rec.rows.map((row,i)=>{const a=+row.area||0,t=row.thickness||'';const tons=a&&t?calcTons(a,t).toFixed(2):'—';const mill=a&&t?calcMill(a,t).toFixed(2):'—';const sg=+row.signs||0;
     return '<tr><td style="text-align:center">'+(i+1)+'</td><td>'+eh(row.segment||'')+'</td><td style="text-align:center">'+(a||'—')+'</td><td style="text-align:center">'+(t||'—')+'</td><td style="text-align:center">'+tons+'</td><td style="text-align:center">'+mill+'</td><td style="text-align:center">'+(sg||'—')+'</td></tr>';}).join('');
-  return `<div class="p-wrap"><div class="p-header"><div><div class="p-title">🏗️ ${eh(caseName)} 施工面積記錄</div><div class="p-subtitle">${eh(rec.zone||'')}${rec.material?'　料別：'+eh(rec.material):''}${rec.bento?'　🍱 便當：'+eh(rec.bento):''}</div></div><div class="p-logo">📋</div></div>
+  return `<div class="p-wrap"><div class="p-header"><div><div class="p-title">🏗️ ${eh(caseName)} 施工面積記錄</div><div class="p-subtitle">${eh(rec.zone||'')}</div>${(rec.material||rec.bento)?`<div class="p-subtitle2">${rec.material?'料別：'+eh(rec.material):''}${rec.material&&rec.bento?'　':''}${rec.bento?'🍱 便當：'+eh(rec.bento):''}</div>`:''}</div><div class="p-logo">📋</div></div>
     <div class="p-info"><div class="p-info-item"><div class="p-info-label">日期</div><div class="p-info-val">${eh(rec.date||'—')}</div></div><div class="p-info-item"><div class="p-info-label">星期</div><div class="p-info-val">${eh(rec.weekday||'—')}</div></div><div class="p-info-item"><div class="p-info-label">日/夜</div><div class="p-info-val">${eh(rec.shift||'—')}</div></div><div class="p-info-item"><div class="p-info-label">前置</div><div class="p-info-val">${eh(rec.prepare||'—')}</div></div><div class="p-info-item"><div class="p-info-label">刨除</div><div class="p-info-val">${eh(rec.milling||'—')}</div></div><div class="p-info-item"><div class="p-info-label">鋪設</div><div class="p-info-val">${eh(rec.paving||'—')}</div></div></div>
     <div class="p-tbl-title">📊 施工路段明細</div>
     <table><thead><tr><th style="width:44px">順序</th><th>施工路段</th><th style="width:72px">面積(m²)</th><th style="width:64px">厚度(cm)</th><th style="width:72px">噸數(T)</th><th style="width:72px">刨除(-0.5)</th><th style="width:56px">告示牌</th></tr></thead>
@@ -2022,7 +2053,7 @@ function doBatchPrint(){
   const selectedRecs=records.filter(r=>batchSelected.has(r.id)).sort((a,b)=>{const da=parseDate(a.date),db=parseDate(b.date);return(da?da.getTime():0)-(db?db.getTime():0);});
   const recPages=selectedRecs.map((rec,i)=>`<div style="${i>0?'page-break-before:always;':''}padding:0">${buildRecHtml(rec)}</div>`).join('');
   const pa=document.getElementById('print-area');
-  pa.innerHTML=`<style>@page{size:A4 portrait;margin:14mm;}html{-webkit-print-color-adjust:exact;print-color-adjust:exact;}*{box-sizing:border-box;margin:0;padding:0;}body{font-family:'Microsoft YaHei','PingFang TC',sans-serif;background:#fff;color:#1e293b;}.p-wrap{padding:0;}.p-header{display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #1e3a6e;padding-bottom:10px;margin-bottom:14px;}.p-title{font-size:30px;font-weight:900;color:#1e3a6e;}.p-subtitle{font-size:20px;font-weight:700;color:#334155;margin-top:5px;}.p-logo{font-size:28px;}.p-info{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;border:1.5px solid #cbd5e1;border-radius:8px;overflow:hidden;margin-bottom:16px;}.p-info-item{padding:9px 13px;border-right:1px solid #cbd5e1;border-bottom:1px solid #cbd5e1;}.p-info-item:nth-child(3n){border-right:none;}.p-info-item:nth-last-child(-n+3){border-bottom:none;}.p-info-label{font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#94a3b8;margin-bottom:3px;}.p-info-val{font-size:20px;font-weight:700;color:#1e293b;}.p-tbl-title{font-size:18px;font-weight:700;color:#d97706;background:#fffbeb;border-left:4px solid #d97706;padding:6px 11px;border-radius:4px;margin-bottom:9px;}table{width:100%;border-collapse:collapse;}thead tr{background:#1e3a6e;color:#fff;}thead th{padding:11px 8px;text-align:center;font-weight:700;font-size:17px;}thead th:nth-child(2){text-align:left;}tbody tr:nth-child(odd){background:#f8fafc;}tbody tr:nth-child(even){background:#fff;}tbody td{padding:12px 8px;border-bottom:1px solid #e2e8f0;font-size:18px;}tbody td:nth-child(2){text-align:left;}.sub-row{background:#eff6ff !important;font-weight:700;color:#1e40af;}.sub-row td{border-top:2px solid #bfdbfe;border-bottom:2px solid #bfdbfe;padding:12px 8px;font-size:18px;}.p-summary{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px;}.p-sum-box{border:2px solid #e2e8f0;border-radius:8px;padding:14px 16px;text-align:center;}.p-sum-box.highlight{border-color:#1e3a6e;background:#f0f4ff;}.p-sum-label{font-size:15px;font-weight:700;color:#64748b;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;}.p-sum-val{font-size:36px;font-weight:900;color:#1e3a6e;}.p-sum-unit{font-size:18px;color:#94a3b8;margin-left:2px;}.p-footer{display:none;}</style>${recPages}`;
+  pa.innerHTML=`<style>@page{size:A4 portrait;margin:14mm;}html{-webkit-print-color-adjust:exact;print-color-adjust:exact;}*{box-sizing:border-box;margin:0;padding:0;}body{font-family:'Microsoft YaHei','PingFang TC',sans-serif;background:#fff;color:#1e293b;}.p-wrap{padding:0;}.p-header{display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #1e3a6e;padding-bottom:10px;margin-bottom:14px;}.p-title{font-size:30px;font-weight:900;color:#1e3a6e;}.p-subtitle{font-size:20px;font-weight:700;color:#334155;margin-top:5px;}.p-subtitle2{font-size:16px;font-weight:600;color:#475569;margin-top:4px;}.p-logo{font-size:28px;}.p-info{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;border:1.5px solid #cbd5e1;border-radius:8px;overflow:hidden;margin-bottom:16px;}.p-info-item{padding:9px 13px;border-right:1px solid #cbd5e1;border-bottom:1px solid #cbd5e1;}.p-info-item:nth-child(3n){border-right:none;}.p-info-item:nth-last-child(-n+3){border-bottom:none;}.p-info-label{font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#94a3b8;margin-bottom:3px;}.p-info-val{font-size:20px;font-weight:700;color:#1e293b;}.p-tbl-title{font-size:18px;font-weight:700;color:#d97706;background:#fffbeb;border-left:4px solid #d97706;padding:6px 11px;border-radius:4px;margin-bottom:9px;}table{width:100%;border-collapse:collapse;}thead tr{background:#1e3a6e;color:#fff;}thead th{padding:11px 8px;text-align:center;font-weight:700;font-size:17px;}thead th:nth-child(2){text-align:left;}tbody tr:nth-child(odd){background:#f8fafc;}tbody tr:nth-child(even){background:#fff;}tbody td{padding:12px 8px;border-bottom:1px solid #e2e8f0;font-size:18px;}tbody td:nth-child(2){text-align:left;}.sub-row{background:#eff6ff !important;font-weight:700;color:#1e40af;}.sub-row td{border-top:2px solid #bfdbfe;border-bottom:2px solid #bfdbfe;padding:12px 8px;font-size:18px;}.p-summary{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px;}.p-sum-box{border:2px solid #e2e8f0;border-radius:8px;padding:14px 16px;text-align:center;}.p-sum-box.highlight{border-color:#1e3a6e;background:#f0f4ff;}.p-sum-label{font-size:15px;font-weight:700;color:#64748b;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;}.p-sum-val{font-size:36px;font-weight:900;color:#1e3a6e;}.p-sum-unit{font-size:18px;color:#94a3b8;margin-left:2px;}.p-footer{display:none;}</style>${recPages}`;
   pa.style.display='block';window.print();pa.style.display='none';
   exitBatchMode();showToast(`已列印 ${selectedRecs.length} 筆記錄 🖨️`,'success');
 }
@@ -2113,7 +2144,8 @@ function openPreview(id){
   <div style="font-family:'Microsoft YaHei','PingFang TC',sans-serif;color:#1e293b;font-size:13px">
     <div style="border-bottom:3px solid #1e3a6e;padding-bottom:10px;margin-bottom:12px">
       <div style="font-size:18px;font-weight:900;color:#1e3a6e">🏗️ ${eh(caseName)} 施工面積記錄</div>
-      <div style="font-size:13px;font-weight:700;color:#334155;margin-top:3px">${eh(rec.zone||'')}${rec.material?'　料別：'+eh(rec.material):''}${rec.bento?'　🍱 便當：'+eh(rec.bento):''}</div>
+      <div style="font-size:13px;font-weight:700;color:#334155;margin-top:3px">${eh(rec.zone||'')}</div>
+      ${(rec.material||rec.bento)?`<div style="font-size:12px;font-weight:600;color:#475569;margin-top:2px">${rec.material?'料別：'+eh(rec.material):''}${rec.material&&rec.bento?'　':''}${rec.bento?'🍱 便當：'+eh(rec.bento):''}</div>`:''}
     </div>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);border:1.5px solid #cbd5e1;border-radius:8px;overflow:hidden;margin-bottom:12px">
       ${infoGrid}
@@ -2201,9 +2233,9 @@ function printRec(id){
     return `<tr style="font-size:16px"><td style="text-align:center">${i+1}</td><td>${eh(row.segment||'')}</td><td style="text-align:center">${a||'—'}</td><td style="text-align:center">${t||'—'}</td><td style="text-align:center">${tons}</td><td style="text-align:center">${mill}</td><td style="text-align:center">${sg||'—'}</td></tr>`;}).join('');
   const afterSection=(rec.afterRows&&rec.afterRows.length)?`<div style="margin-top:20px"><div style="font-size:18px;font-weight:700;color:#16a34a;background:#f0fdf4;border-left:4px solid #16a34a;padding:6px 11px;border-radius:4px;margin-bottom:9px">✅ 施工後明細</div><table><thead><tr style="background:#166534"><th style="width:44px">順序</th><th>施工路段</th><th style="width:76px">面積(m²)</th><th style="width:70px">厚度(cm)</th><th style="width:76px">噸數(T)</th></tr></thead><tbody>${(rec.afterRows||[]).map((row,i)=>{const a=+row.area||0,t=row.thickness||'';const tons=a&&t?calcTons(a,t).toFixed(2):'—';return '<tr><td style="text-align:center">'+(i+1)+'</td><td>'+eh(row.segment||'')+'</td><td style="text-align:center">'+(a||'—')+'</td><td style="text-align:center">'+(t||'—')+'</td><td style="text-align:center">'+tons+'</td></tr>';}).join('')}<tr style="background:#f0fdf4;font-weight:700;color:#166534"><td colspan="2" style="text-align:right;padding-right:12px">合計</td><td style="text-align:center">${n(recAfterTot(rec,'area'),1)}</td><td></td><td style="text-align:center">${n(recAfterTot(rec,'tons'))}</td></tr></tbody></table></div>`:''  ;
   const pa=document.getElementById('print-area');
-  pa.innerHTML=`<style>@page{size:A4 portrait;margin:14mm;}@page :first{margin-top:14mm;}html{-webkit-print-color-adjust:exact;print-color-adjust:exact;}*{box-sizing:border-box;margin:0;padding:0;}body{font-family:'Microsoft YaHei','PingFang TC','Noto Sans TC',sans-serif;background:#fff;color:#1e293b;}.p-wrap{padding:0;}.p-header{display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #1e3a6e;padding-bottom:10px;margin-bottom:14px;}.p-title{font-size:30px;font-weight:900;color:#1e3a6e;letter-spacing:1px;}.p-subtitle{font-size:20px;font-weight:700;color:#334155;margin-top:5px;letter-spacing:.5px;}.p-logo{font-size:28px;}.p-info{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;border:1.5px solid #cbd5e1;border-radius:8px;overflow:hidden;margin-bottom:16px;}.p-info-item{padding:9px 13px;border-right:1px solid #cbd5e1;border-bottom:1px solid #cbd5e1;}.p-info-item:nth-child(3n){border-right:none;}.p-info-item:nth-last-child(-n+3){border-bottom:none;}.p-info-label{font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#94a3b8;margin-bottom:3px;}.p-info-val{font-size:20px;font-weight:700;color:#1e293b;}.p-tbl-title{font-size:18px;font-weight:700;color:#d97706;background:#fffbeb;border-left:4px solid #d97706;padding:6px 11px;border-radius:4px;margin-bottom:9px;}table{width:100%;border-collapse:collapse;}thead tr{background:#1e3a6e;color:#fff;}thead th{padding:11px 8px;text-align:center;font-weight:700;font-size:17px;letter-spacing:.5px;}thead th:nth-child(2){text-align:left;}tbody tr:nth-child(odd){background:#f8fafc;}tbody tr:nth-child(even){background:#fff;}tbody td{padding:12px 8px;border-bottom:1px solid #e2e8f0;font-size:18px;}tbody td:nth-child(2){text-align:left;}.sub-row{background:#eff6ff !important;font-weight:700;color:#1e40af;}.sub-row td{border-top:2px solid #bfdbfe;border-bottom:2px solid #bfdbfe;padding:12px 8px;font-size:18px;}.p-summary{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px;}.p-sum-box{border:2px solid #e2e8f0;border-radius:8px;padding:14px 16px;text-align:center;}.p-sum-box.highlight{border-color:#1e3a6e;background:#f0f4ff;}.p-sum-label{font-size:15px;font-weight:700;color:#64748b;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;}.p-sum-val{font-size:36px;font-weight:900;color:#1e3a6e;}.p-sum-unit{font-size:18px;color:#94a3b8;margin-left:2px;}.p-footer{display:none;}</style>
+  pa.innerHTML=`<style>@page{size:A4 portrait;margin:14mm;}@page :first{margin-top:14mm;}html{-webkit-print-color-adjust:exact;print-color-adjust:exact;}*{box-sizing:border-box;margin:0;padding:0;}body{font-family:'Microsoft YaHei','PingFang TC','Noto Sans TC',sans-serif;background:#fff;color:#1e293b;}.p-wrap{padding:0;}.p-header{display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #1e3a6e;padding-bottom:10px;margin-bottom:14px;}.p-title{font-size:30px;font-weight:900;color:#1e3a6e;letter-spacing:1px;}.p-subtitle{font-size:20px;font-weight:700;color:#334155;margin-top:5px;letter-spacing:.5px;}.p-subtitle2{font-size:16px;font-weight:600;color:#475569;margin-top:4px;letter-spacing:.3px;}.p-logo{font-size:28px;}.p-info{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;border:1.5px solid #cbd5e1;border-radius:8px;overflow:hidden;margin-bottom:16px;}.p-info-item{padding:9px 13px;border-right:1px solid #cbd5e1;border-bottom:1px solid #cbd5e1;}.p-info-item:nth-child(3n){border-right:none;}.p-info-item:nth-last-child(-n+3){border-bottom:none;}.p-info-label{font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#94a3b8;margin-bottom:3px;}.p-info-val{font-size:20px;font-weight:700;color:#1e293b;}.p-tbl-title{font-size:18px;font-weight:700;color:#d97706;background:#fffbeb;border-left:4px solid #d97706;padding:6px 11px;border-radius:4px;margin-bottom:9px;}table{width:100%;border-collapse:collapse;}thead tr{background:#1e3a6e;color:#fff;}thead th{padding:11px 8px;text-align:center;font-weight:700;font-size:17px;letter-spacing:.5px;}thead th:nth-child(2){text-align:left;}tbody tr:nth-child(odd){background:#f8fafc;}tbody tr:nth-child(even){background:#fff;}tbody td{padding:12px 8px;border-bottom:1px solid #e2e8f0;font-size:18px;}tbody td:nth-child(2){text-align:left;}.sub-row{background:#eff6ff !important;font-weight:700;color:#1e40af;}.sub-row td{border-top:2px solid #bfdbfe;border-bottom:2px solid #bfdbfe;padding:12px 8px;font-size:18px;}.p-summary{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px;}.p-sum-box{border:2px solid #e2e8f0;border-radius:8px;padding:14px 16px;text-align:center;}.p-sum-box.highlight{border-color:#1e3a6e;background:#f0f4ff;}.p-sum-label{font-size:15px;font-weight:700;color:#64748b;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;}.p-sum-val{font-size:36px;font-weight:900;color:#1e3a6e;}.p-sum-unit{font-size:18px;color:#94a3b8;margin-left:2px;}.p-footer{display:none;}</style>
   <div class="p-wrap">
-    <div class="p-header"><div><div class="p-title">🏗️ ${eh(caseName)} 施工面積記錄</div><div class="p-subtitle">${eh(rec.zone||'')}${rec.material?'　　料別：'+eh(rec.material):''}${rec.bento?'　🍱 便當：'+eh(rec.bento):''}</div></div><div class="p-logo">📋</div></div>
+    <div class="p-header"><div><div class="p-title">🏗️ ${eh(caseName)} 施工面積記錄</div><div class="p-subtitle">${eh(rec.zone||'')}</div>${(rec.material||rec.bento)?`<div class="p-subtitle2">${rec.material?'料別：'+eh(rec.material):''}${rec.material&&rec.bento?'　':''}${rec.bento?'🍱 便當：'+eh(rec.bento):''}</div>`:''}</div><div class="p-logo">📋</div></div>
     <div class="p-info">
       <div class="p-info-item"><div class="p-info-label">日期</div><div class="p-info-val">${eh(rec.date||'—')}</div></div>
       <div class="p-info-item"><div class="p-info-label">星期</div><div class="p-info-val">${eh(rec.weekday||'—')}</div></div>
