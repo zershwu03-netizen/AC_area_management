@@ -445,12 +445,13 @@ table.dt tbody tr:last-child td{border-bottom:none;}
 </div></div>
 
 <!-- Delete Modal -->
-<div class="mo" id="delMo"><div class="md" style="max-width:300px">
+<div class="mo" id="delMo"><div class="md" style="max-width:320px">
   <h3>⚠️ 確認刪除</h3>
-  <p style="color:var(--text-dim);font-size:13px">確定刪除此施工記錄？</p>
+  <p id="delMoMsg" style="color:var(--text-dim);font-size:13px;margin-bottom:4px">確定要刪除？</p>
+  <p style="color:#dc2626;font-size:12px">⚠️ 刪除後無法復原</p>
   <div class="md-actions">
     <button class="btn btn-ghost" onclick="closeDelMo()">取消</button>
-    <button class="btn btn-danger" onclick="confirmDel()">刪除</button>
+    <button class="btn btn-danger" onclick="confirmDel()">確認刪除</button>
   </div>
 </div></div>
 
@@ -1223,7 +1224,14 @@ function uCase(caseId, field, val) {
 }
 
 let delCaseTarget = null;
-function askDelCase(id){ delCaseTarget=id; document.getElementById('delMo').classList.add('open'); }
+function askDelCase(id){
+  delCaseTarget=id;
+  const c=cases.find(x=>x.id===id);
+  const name=c?(c.caseLocation||'')+'第'+(c.caseNum||'')+'派案':'此派案';
+  const recs=getCaseRecords(id);
+  document.getElementById('delMoMsg').textContent=`確定刪除「${name}」及其 ${recs.length} 筆施工記錄？`;
+  document.getElementById('delMo').classList.add('open');
+}
 
 async function confirmDel(){
   if(delTarget!=null){ await removeRecord(delTarget); delTarget=null; }
@@ -1979,7 +1987,13 @@ function updSignCount(recId) {
 // ══════════════════════════════════════════
 //  RECORD DELETE
 // ══════════════════════════════════════════
-function askDel(id){delTarget=id;document.getElementById('delMo').classList.add('open');}
+function askDel(id){
+  delTarget=id;
+  const rec=gr(id);
+  const msg=rec?`確定刪除「${rec.date||''}${rec.zone?'　'+rec.zone:''}」這筆施工記錄？`:'確定刪除此施工記錄？';
+  document.getElementById('delMoMsg').textContent=msg;
+  document.getElementById('delMo').classList.add('open');
+}
 function closeDelMo(){document.getElementById('delMo').classList.remove('open');delTarget=null;delCaseTarget=null;}
 async function confirmDel(){
   if(delTarget!=null){await removeRecord(delTarget);delTarget=null;}
@@ -2121,16 +2135,21 @@ function buildRecHtml(rec){
 function doBatchPrint(){
   if(batchSelected.size===0){showToast('請先勾選要列印的記錄','error');return;}
   const selectedRecs=records.filter(r=>batchSelected.has(r.id)).sort((a,b)=>{const da=parseDate(a.date),db=parseDate(b.date);return(da?da.getTime():0)-(db?db.getTime():0);});
-  const css=`@page{size:A4 portrait;margin:8mm 10mm;}html{-webkit-print-color-adjust:exact;print-color-adjust:exact;}*{box-sizing:border-box;margin:0;padding:0;}body{font-family:'Microsoft YaHei','PingFang TC',sans-serif;background:#fff;color:#1e293b;}.p-wrap{padding:0;page-break-after:always;break-after:page;}.p-wrap:last-child{page-break-after:auto;break-after:auto;}.p-header{display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #1e3a6e;padding-bottom:5px;margin-bottom:7px;}.p-title{font-size:18px;font-weight:900;color:#1e3a6e;}.p-subtitle{font-size:12px;font-weight:700;color:#334155;margin-top:2px;}.p-subtitle2{font-size:10px;font-weight:600;color:#475569;margin-top:2px;}.p-logo{font-size:18px;}.p-info{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;border:1.5px solid #94a3b8;border-radius:5px;overflow:hidden;margin-bottom:7px;}.p-info-item{padding:4px 8px;border-right:1px solid #94a3b8;border-bottom:1px solid #94a3b8;}.p-info-item:nth-child(3n){border-right:none;}.p-info-item:nth-last-child(-n+3){border-bottom:none;}.p-info-label{font-size:8px;font-weight:700;letter-spacing:.8px;color:#64748b;margin-bottom:1px;}.p-info-val{font-size:13px;font-weight:700;color:#1e293b;}.p-tbl-title{font-size:11px;font-weight:700;color:#d97706;background:#fffbeb;border-left:3px solid #d97706;padding:3px 7px;border-radius:3px;margin-bottom:5px;}table{width:100%;border-collapse:collapse;border:1.5px solid #475569;}thead tr{background:#1e3a6e;color:#fff;}thead th{padding:5px 4px;text-align:center;font-weight:700;font-size:11px;border-right:1px solid #60748a;}thead th:last-child{border-right:none;}thead th:nth-child(2){text-align:left;}tbody tr:nth-child(odd){background:#f8fafc;}tbody tr:nth-child(even){background:#fff;}tbody td{padding:4px 4px;border-bottom:1px solid #94a3b8;border-right:1px solid #cbd5e1;font-size:11px;}tbody td:last-child{border-right:none;}tbody td:nth-child(2){text-align:left;}.sub-row{background:#dbeafe !important;font-weight:800;color:#1e40af;}.sub-row td{border-top:1.5px solid #3b82f6;border-bottom:1.5px solid #3b82f6;padding:4px 4px;font-size:12px;}.p-summary{display:none;}.p-footer{display:none;}`;
-  const body = selectedRecs.map(rec=>buildRecHtml(rec)).join('');
+  const css=`@page{size:A4 portrait;margin:8mm 10mm;}html{-webkit-print-color-adjust:exact;print-color-adjust:exact;}*{box-sizing:border-box;margin:0;padding:0;}body{font-family:'Microsoft YaHei','PingFang TC','Noto Sans TC',sans-serif;background:#fff;color:#1e293b;}.p-wrap{padding:0;}.p-header{display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #1e3a6e;padding-bottom:6px;margin-bottom:8px;}.p-title{font-size:22px;font-weight:900;color:#1e3a6e;letter-spacing:.5px;}.p-subtitle{font-size:14px;font-weight:700;color:#334155;margin-top:3px;}.p-subtitle2{font-size:12px;font-weight:600;color:#475569;margin-top:2px;}.p-logo{font-size:20px;}.p-info{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;border:1.5px solid #94a3b8;border-radius:5px;overflow:hidden;margin-bottom:8px;}.p-info-item{padding:6px 10px;border-right:1px solid #94a3b8;border-bottom:1px solid #94a3b8;}.p-info-item:nth-child(3n){border-right:none;}.p-info-item:nth-last-child(-n+3){border-bottom:none;}.p-info-label{font-size:9px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:#64748b;margin-bottom:2px;}.p-info-val{font-size:16px;font-weight:700;color:#1e293b;}.p-tbl-title{font-size:13px;font-weight:700;color:#d97706;background:#fffbeb;border-left:3px solid #d97706;padding:4px 8px;border-radius:3px;margin-bottom:6px;}table{width:100%;border-collapse:collapse;border:1.5px solid #475569;}thead tr{background:#1e3a6e;color:#fff;}thead th{padding:7px 5px;text-align:center;font-weight:700;font-size:13px;letter-spacing:.2px;border-right:1px solid #60748a;}thead th:last-child{border-right:none;}thead th:nth-child(2){text-align:left;}tbody tr:nth-child(odd){background:#f8fafc;}tbody tr:nth-child(even){background:#fff;}tbody td{padding:6px 5px;border-bottom:1px solid #94a3b8;border-right:1px solid #cbd5e1;font-size:13px;}tbody td:last-child{border-right:none;}tbody td:nth-child(2){text-align:left;}.sub-row{background:#dbeafe !important;font-weight:800;color:#1e40af;}.sub-row td{border-top:2px solid #3b82f6;border-bottom:2px solid #3b82f6;padding:6px 5px;font-size:14px;}.p-summary{display:none;}.p-footer{display:none;}
+  .pagebreak{page-break-before:always;break-before:page;}`;
+  // 每筆用 div.pagebreak 分頁，第一筆不加
+  const body = selectedRecs.map((rec,i)=>
+    `<div class="${i>0?'pagebreak':''}">${buildRecHtml(rec)}</div>`
+  ).join('');
   const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${css}</style></head><body>${body}</body></html>`;
-  // 用 iframe 列印，最可靠的分頁方式
   let ifrm = document.getElementById('_printFrame');
-  if(!ifrm){ ifrm=document.createElement('iframe'); ifrm.id='_printFrame'; ifrm.style.cssText='position:fixed;top:-9999px;left:-9999px;width:0;height:0;border:none;'; document.body.appendChild(ifrm); }
+  if(!ifrm){ ifrm=document.createElement('iframe'); ifrm.id='_printFrame'; ifrm.style.cssText='position:fixed;top:-9999px;left:-9999px;width:210mm;height:297mm;border:none;'; document.body.appendChild(ifrm); }
   ifrm.srcdoc = html;
   ifrm.onload = ()=>{
-    try{ ifrm.contentWindow.focus(); ifrm.contentWindow.print(); } catch(e){ window.print(); }
-    exitBatchMode(); showToast(`已列印 ${selectedRecs.length} 筆記錄 🖨️`,'success');
+    setTimeout(()=>{
+      try{ ifrm.contentWindow.focus(); ifrm.contentWindow.print(); } catch(e){ window.print(); }
+      exitBatchMode(); showToast(`已列印 ${selectedRecs.length} 筆記錄 🖨️`,'success');
+    }, 400);
   };
 }
 
