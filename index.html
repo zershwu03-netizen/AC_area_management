@@ -2828,8 +2828,11 @@ function onNotifyRecChange(recId){
     segList.innerHTML = segs.map((row,i)=>`
       <div style="display:flex;align-items:center;gap:8px">
         <div style="font-size:13px;font-weight:700;color:var(--text-dim);width:20px;text-align:center;flex-shrink:0">${i+1}</div>
-        <div style="flex:1;font-size:13px;font-weight:600;color:var(--text)">${eh(row.segment)}</div>
-        <input class="fi" data-seglink="${i}" style="flex:1.2;font-size:12px;padding:4px 8px" placeholder="貼入 Google Maps 連結" oninput="notifyPreview()">
+        ${row.mapLink
+          ? `<a href="${eh(row.mapLink)}" target="_blank" style="flex:1;font-size:13px;font-weight:600;color:var(--accent);text-decoration:none">${eh(row.segment)} 📍</a>`
+          : `<div style="flex:1;font-size:13px;font-weight:600;color:var(--text)">${eh(row.segment)}</div>`
+        }
+        <input class="fi" data-seglink="${i}" value="${eh(row.mapLink||'')}" style="flex:1.2;font-size:12px;padding:4px 8px" placeholder="貼入 Google Maps 連結" oninput="saveSegLink(${rec.id},${row.id},this.value);notifyPreview()">
       </div>
     `).join('');
   }
@@ -2850,7 +2853,7 @@ function updateCrewTabs(){
   const checked = [...document.querySelectorAll('#notifyCrewList input[type=checkbox]:checked')];
   if(!checked.length){ tabs.innerHTML=''; return; }
   tabs.innerHTML = checked.map(el=>{
-    const crew = CREW_DEFS.find(c=>c.id===el.dataset.crew);
+    const crew = crewDefs.find(c=>c.id===el.dataset.crew);
     const active = notifyCurrentCrew===el.dataset.crew;
     return `<button onclick="switchNotifyCrew('${el.dataset.crew}')" style="padding:5px 12px;border-radius:20px;border:2px solid ${active?'#7c3aed':'var(--border)'};background:${active?'#7c3aed':'var(--surface)'};color:${active?'#fff':'var(--text)'};font-size:12px;font-weight:700;cursor:pointer">${crew?crew.name:el.dataset.crew}</button>`;
   }).join('');
@@ -2863,7 +2866,7 @@ function switchNotifyCrew(crewId){
 }
 
 function buildNotifyMsg(crewId){
-  const crew = CREW_DEFS.find(c=>c.id===crewId);
+  const crew = crewDefs.find(c=>c.id===crewId);
   if(!crew) return '';
   const rec = notifyRecId ? gr(notifyRecId) : null;
   if(!rec) return '';
@@ -2902,8 +2905,8 @@ function buildNotifyMsg(crewId){
   const segs = (rec2&&rec2.rows||[]).filter(r=>r.segment);
   const segLines = segs.map((row,i)=>{
     const linkInput = segInputs.find(el=>+el.dataset.seglink===i);
-    const link = linkInput ? linkInput.value.trim() : '';
-    return `${i+1}. ${row.segment}${link?' '+link:''}`;
+    const link = linkInput ? linkInput.value.trim() : (row.mapLink||'');
+    return `${i+1}. ${row.segment}${link?'\n'+link:''}`;
   }).join('\n');
 
   // 鏟裝機+清掃機：時間 → 鏟掃 → 路段（不顯示機具名稱）
