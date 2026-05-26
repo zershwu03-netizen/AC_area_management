@@ -2746,7 +2746,7 @@ function renderCrewSpecialInput(crew){
   if(crew.special==='headcount_note'){
     return `<div style="display:flex;flex-direction:column;gap:3px">
       <input class="fi" data-headcount="${crew.id}" type="number" min="1" max="99" style="width:52px;text-align:center;font-size:13px;font-weight:700" placeholder="人數" oninput="notifyPreview()">
-      <input class="fi" data-note="${crew.id}" style="width:120px;font-size:11px" placeholder="備註（工具）" oninput="notifyPreview()">
+      <input class="fi" data-note="${crew.id}" style="width:120px;font-size:11px" placeholder="備註（工具）" value="${localStorage.getItem('notifyNote_'+crew.id)||''}" oninput="localStorage.setItem('notifyNote_'+this.dataset.note,this.value);notifyPreview()">
     </div>`;
   }
   if(crew.special==='sweep'){
@@ -2871,50 +2871,64 @@ function buildNotifyMsg(crewId){
   const rec = notifyRecId ? gr(notifyRecId) : null;
   if(!rec) return '';
 
-  // 日期行
+  // 日期
   const dateStr = rec.date ? rec.date.replace(/^\d+\//, '') : '—';
   const wday = rec.weekday ? `(${rec.weekday})` : '';
 
-  // 時間：依工班類型取對應時間
-  let timeStr = '';
+  // 時間（不含「前置/刨除/鋪設」文字，只有「早上08:00」）
   const timeMap = {
-    pre:  { use: document.getElementById('notifyUsePre').checked,  val: document.getElementById('notifyTimePre').value,  label:'前置作業' },
-    mill: { use: document.getElementById('notifyUseMill').checked, val: document.getElementById('notifyTimeMill').value, label:'刨除' },
-    pave: { use: document.getElementById('notifyUsePave').checked, val: document.getElementById('notifyTimePave').value, label:'鋪設' },
+    pre:  { use: document.getElementById('notifyUsePre').checked,  val: document.getElementById('notifyTimePre').value  },
+    mill: { use: document.getElementById('notifyUseMill').checked, val: document.getElementById('notifyTimeMill').value },
+    pave: { use: document.getElementById('notifyUsePave').checked, val: document.getElementById('notifyTimePave').value },
   };
   const t = timeMap[crew.time];
-  if(t && t.use && t.val){
-    timeStr = `${timePeriod(t.val)}${t.val}${t.label}`;
-  }
-
-  // 機具名稱
-  const nameInput = document.querySelector(`input[data-crewname="${crewId}"]`);
-  const crewName = nameInput ? (nameInput.value.trim() || crew.name) : crew.name;
-
-  // 鏟掃（只有 sweep:true 的工班）
-  let sweepStr = '';
-  if(crew.sweep){
-    const sh = document.getElementById('notifyShovel').value;
-    const sw = document.getElementById('notifySweep').value;
-    if(sh||sw) sweepStr = `${sh||'?'}鏟${sw||'?'}掃`;
-  }
+  const timeStr = (t && t.use && t.val) ? `${timePeriod(t.val)}${t.val}` : '';
 
   // 路段
   const segInputs = [...document.querySelectorAll('input[data-seglink]')];
-  const rec2 = gr(notifyRecId);
-  const segs = (rec2&&rec2.rows||[]).filter(r=>r.segment);
+  const segs = (rec.rows||[]).filter(r=>r.segment);
   const segLines = segs.map((row,i)=>{
     const linkInput = segInputs.find(el=>+el.dataset.seglink===i);
     const link = linkInput ? linkInput.value.trim() : (row.mapLink||'');
     return `${i+1}. ${row.segment}${link?'\n'+link:''}`;
   }).join('\n');
 
-  // 鏟裝機+清掃機：時間 → 鏟掃 → 路段（不顯示機具名稱）
-  // 其他工班：時間 → 機具名稱 → 路段
-  if(crew.sweep){
-    return `${dateStr}${wday} ${timeStr}${sweepStr?'\n'+sweepStr.trim():''}${segLines?'\n'+segLines:''}`;
+  // 特殊欄位
+  let specialLine = '';
+  if(crew.special==='headcount'){
+    const n = document.querySelector(`input[data-headcount="${crewId}"]`);
+    const cnt = n ? n.value.trim() : '';
+    specialLine = cnt ? `${cnt}個人` : '';
+  } else if(crew.special==='headcount_note'){
+    const n    = document.querySelector(`input[data-headcount="${crewId}"]`);
+    const note = document.querySelector(`input[data-note="${crewId}"]`);
+    const cnt  = n    ? n.value.trim()    : '';
+    const ntxt = note ? note.value.trim() : '';
+    specialLine = cnt ? `${cnt}個人${ntxt?'('+ntxt+')':''}` : ntxt ? `(${ntxt})` : '';
+  } else if(crew.special==='sweep'){
+    const sh = document.querySelector(`input[data-shovel="${crewId}"]`);
+    const sw = document.querySelector(`input[data-sweep="${crewId}"]`);
+    const s1 = sh ? sh.value.trim() : '';
+    const s2 = sw ? sw.value.trim() : '';
+    specialLine = (s1||s2) ? `${s1||'?'}鏟${s2||'?'}掃` : '';
+  } else if(crew.special==='excavator'){
+    const e40  = document.querySelector(`input[data-ex40="${crewId}"]`);
+    const e70  = document.querySelector(`input[data-ex70="${crewId}"]`);
+    const e120 = document.querySelector(`input[data-ex120="${crewId}"]`);
+    const parts = [];
+    if(e40  && +e40.value  > 0) parts.push(`40怪手${numZh(e40.value)}台`);
+    if(e70  && +e70.value  > 0) parts.push(`70怪手${numZh(e70.value)}台`);
+    if(e120 && +e120.value > 0) parts.push(`120怪手${numZh(e120.value)}台`);
+    specialLine = parts.join('.');
+  } else {
+    specialLine = crew.name;
   }
-  return `${dateStr}${wday} ${timeStr}\n${crewName}${segLines?'\n'+segLines:''}`;
+
+  // 組合訊息
+  const lines = [`${dateStr}${wday} ${timeStr}`];
+  if(specialLine) lines.push(specialLine);
+  if(segLines) lines.push(segLines);
+  return lines.join('\n');
 }
 
 function notifyPreview(){
