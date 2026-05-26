@@ -345,6 +345,10 @@ table.dt tbody tr:last-child td{border-bottom:none;}
       <div class="val" style="font-size:22px">📋</div>
       <div class="lbl" style="color:#16a34a">進場報告</div>
     </div>
+    <div class="stat-chip" onclick="openNotifyMo()" style="cursor:pointer;border-color:#7c3aed;background:#faf5ff">
+      <div class="val" style="font-size:22px">📨</div>
+      <div class="lbl" style="color:#7c3aed">工班通知</div>
+    </div>
   </div>
 
   <div class="offline-banner" id="offlineBanner">
@@ -493,6 +497,73 @@ table.dt tbody tr:last-child td{border-bottom:none;}
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:13px;height:13px"><path d="M6 9l6 6 6-6"/></svg>
         產生報告
       </button>
+    </div>
+  </div>
+</div>
+
+
+<!-- Notify Modal -->
+<div class="mo" id="notifyMo" style="align-items:flex-start;padding:0;overflow-y:auto">
+  <div class="md" style="max-width:660px;width:100%;margin:16px auto;max-height:none">
+    <h3>📨 工班通知產生器</h3>
+    <div style="font-size:12px;color:var(--text-dim);margin-top:-6px">選擇施工記錄後填寫出勤工班，產生各人通知訊息</div>
+
+    <div style="margin-top:12px;display:flex;flex-direction:column;gap:8px">
+      <div class="fg">
+        <div class="fl">選擇施工記錄</div>
+        <div class="sw"><select class="fs" id="notifyRecSel" onchange="onNotifyRecChange(this.value)">
+          <option value="">請選擇施工記錄…</option>
+        </select></div>
+      </div>
+
+      <div id="notifyTimeRow" style="display:none;flex-direction:column;gap:6px">
+        <div style="font-size:12px;font-weight:700;color:var(--text-dim)">進場時間（從記錄帶入，可修改）</div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap">
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+            <input type="checkbox" id="notifyUsePre" style="accent-color:var(--accent)" onchange="notifyPreview()"> 前置
+            <input class="fi" id="notifyTimePre" style="width:80px;font-size:13px" placeholder="07:30" oninput="notifyPreview()">
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+            <input type="checkbox" id="notifyUseMill" style="accent-color:var(--accent)" onchange="notifyPreview()"> 刨除
+            <input class="fi" id="notifyTimeMill" style="width:80px;font-size:13px" placeholder="08:00" oninput="notifyPreview()">
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+            <input type="checkbox" id="notifyUsePave" style="accent-color:var(--accent)" onchange="notifyPreview()"> 鋪設
+            <input class="fi" id="notifyTimePave" style="width:80px;font-size:13px" placeholder="11:00" oninput="notifyPreview()">
+          </label>
+        </div>
+      </div>
+
+      <div id="notifySweepRow" style="display:none;align-items:center;gap:8px">
+        <div style="font-size:13px;font-weight:600;color:var(--text)">鏟掃（鏟裝機班長用）：</div>
+        <input class="fi" id="notifyShovel" type="number" min="0" max="9" style="width:52px;text-align:center;font-size:15px;font-weight:700" placeholder="3" oninput="notifyPreview()">
+        <span style="font-size:14px;font-weight:600">鏟</span>
+        <input class="fi" id="notifySweep" type="number" min="0" max="9" style="width:52px;text-align:center;font-size:15px;font-weight:700" placeholder="2" oninput="notifyPreview()">
+        <span style="font-size:14px;font-weight:600">掃</span>
+      </div>
+    </div>
+
+    <div style="margin-top:12px">
+      <div style="font-size:12px;font-weight:700;color:var(--text-dim);margin-bottom:6px">施工路段 <span style="font-weight:400">（貼入 Google Maps 連結）</span></div>
+      <div id="notifySegList" style="display:flex;flex-direction:column;gap:5px">
+        <div style="color:var(--text-dim);font-size:12px;text-align:center;padding:8px">請先選擇施工記錄</div>
+      </div>
+    </div>
+
+    <div style="margin-top:12px">
+      <div style="font-size:12px;font-weight:700;color:var(--text-dim);margin-bottom:6px">出勤工班 <span style="font-weight:400">（勾選 + 填機具名稱）</span></div>
+      <div id="notifyCrewList" style="display:grid;grid-template-columns:1fr 1fr;gap:5px"></div>
+    </div>
+
+    <div style="margin-top:14px;border-top:1px solid var(--border);padding-top:12px">
+      <div style="font-size:12px;font-weight:700;color:var(--text-dim);margin-bottom:8px">預覽訊息</div>
+      <div id="notifyCrewTabs" style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px"></div>
+      <div id="notifyPreviewBox" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:14px;line-height:1.9;white-space:pre-wrap;min-height:80px;font-family:monospace;color:var(--text)">選擇工班後顯示預覽</div>
+      <button class="btn" onclick="notifyCopy()" style="margin-top:8px;background:#7c3aed;color:#fff;width:100%;font-size:14px">📋 複製此訊息</button>
+    </div>
+
+    <div class="md-actions" style="margin-top:4px">
+      <button class="btn btn-ghost" onclick="closeNotifyMo()">關閉</button>
     </div>
   </div>
 </div>
@@ -2447,6 +2518,214 @@ function openReportMo(){
 }
 function closeReportMo(){ document.getElementById('reportMo').classList.remove('open'); }
 
+// ══════════════════════════════════════════
+//  NOTIFY MODAL
+// ══════════════════════════════════════════
+
+// 預設工班清單：[id, 顯示名稱, 對應時間類型, 是否為鏟裝機]
+const CREW_DEFS = [
+  {id:'yj',  name:'義交',         time:'pre',  sweep:false},
+  {id:'dhj', name:'堆高機',       time:'pre',  sweep:false},
+  {id:'pcc', name:'刨除機',       time:'mill', sweep:false},
+  {id:'gs',  name:'鏟裝機+清掃機',time:'mill', sweep:true },
+  {id:'gsh', name:'怪手',         time:'mill', sweep:false},
+  {id:'pzj', name:'鋪裝機',       time:'pave', sweep:false},
+  {id:'psw', name:'鋪設工',       time:'pave', sweep:false},
+  {id:'rs',  name:'熱鏟',         time:'pave', sweep:false},
+  {id:'el2', name:'二輪壓路機',   time:'pave', sweep:false},
+  {id:'el3', name:'三輪壓路機',   time:'pave', sweep:false},
+  {id:'jr',  name:'膠輪壓路機',   time:'pave', sweep:false},
+  {id:'yc',  name:'油車',         time:'pave', sweep:false},
+];
+
+let notifyCurrentCrew = null; // 目前預覽的工班 id
+let notifyRecId = null;        // 目前選的記錄 id
+
+function openNotifyMo(){
+  // 填充施工記錄下拉
+  const sel = document.getElementById('notifyRecSel');
+  sel.innerHTML = '<option value="">請選擇施工記錄…</option>' +
+    [...records].sort((a,b)=>{
+      const da=parseDate(a.date),db=parseDate(b.date);
+      return (db?db.getTime():0)-(da?da.getTime():0);
+    }).map(r=>{
+      const c=cases.find(x=>x.id==r.caseId)||{};
+      const cname=(c.caseLocation||'')+'第'+(c.caseNum||'?')+'派案';
+      const shift=r.shift==='日間'?'☀️':'🌙';
+      return `<option value="${r.id}">${r.date||'—'} ${shift} ${cname} ${r.zone?'— '+r.zone:''}</option>`;
+    }).join('');
+  sel.value = '';
+
+  // 建立工班清單
+  buildCrewList();
+
+  // 重置
+  document.getElementById('notifyTimeRow').style.display='none';
+  document.getElementById('notifySweepRow').style.display='none';
+  document.getElementById('notifySegList').innerHTML='<div style="color:var(--text-dim);font-size:12px;text-align:center;padding:8px">請先選擇施工記錄</div>';
+  document.getElementById('notifyCrewTabs').innerHTML='';
+  document.getElementById('notifyPreviewBox').textContent='選擇工班後顯示預覽';
+  notifyCurrentCrew=null; notifyRecId=null;
+
+  document.getElementById('notifyMo').classList.add('open');
+}
+
+function closeNotifyMo(){ document.getElementById('notifyMo').classList.remove('open'); }
+
+function buildCrewList(){
+  const list = document.getElementById('notifyCrewList');
+  list.innerHTML = CREW_DEFS.map(crew=>`
+    <label style="display:flex;align-items:center;gap:7px;padding:7px 10px;background:var(--surface);border:1px solid var(--border);border-radius:7px;cursor:pointer;user-select:none">
+      <input type="checkbox" data-crew="${crew.id}" style="width:15px;height:15px;accent-color:#7c3aed;flex-shrink:0" onchange="onCrewCheck('${crew.id}',this.checked)">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:700;color:var(--text)">${crew.name}</div>
+      </div>
+      <input class="fi" data-crewname="${crew.id}" style="width:90px;font-size:12px;padding:3px 6px" placeholder="機具名稱" oninput="notifyPreview()">
+    </label>
+  `).join('');
+}
+
+function onNotifyRecChange(recId){
+  notifyRecId = +recId;
+  if(!recId){ return; }
+  const rec = gr(+recId);
+  if(!rec) return;
+
+  // 帶入時間
+  document.getElementById('notifyTimeRow').style.display='flex';
+  document.getElementById('notifySweepRow').style.display='flex';
+
+  const pre = rec.setup || rec.milling || '';
+  const mill = rec.milling || '';
+  const pave = rec.paving || '';
+
+  document.getElementById('notifyTimePre').value = pre;
+  document.getElementById('notifyTimeMill').value = mill;
+  document.getElementById('notifyTimePave').value = pave;
+  document.getElementById('notifyUsePre').checked = !!pre;
+  document.getElementById('notifyUseMill').checked = !!mill;
+  document.getElementById('notifyUsePave').checked = !!pave;
+
+  // 建立路段清單
+  const segs = (rec.rows||[]).filter(r=>r.segment);
+  const segList = document.getElementById('notifySegList');
+  if(!segs.length){
+    segList.innerHTML='<div style="color:var(--text-dim);font-size:12px;text-align:center;padding:8px">此記錄沒有路段資料</div>';
+  } else {
+    segList.innerHTML = segs.map((row,i)=>`
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="font-size:13px;font-weight:700;color:var(--text-dim);width:20px;text-align:center;flex-shrink:0">${i+1}</div>
+        <div style="flex:1;font-size:13px;font-weight:600;color:var(--text)">${eh(row.segment)}</div>
+        <input class="fi" data-seglink="${i}" style="flex:1.2;font-size:12px;padding:4px 8px" placeholder="貼入 Google Maps 連結" oninput="notifyPreview()">
+      </div>
+    `).join('');
+  }
+
+  notifyPreview();
+}
+
+function onCrewCheck(crewId, checked){
+  // 更新 tab 清單
+  updateCrewTabs();
+  // 如果勾選，切換到此工班預覽
+  if(checked){ notifyCurrentCrew=crewId; }
+  notifyPreview();
+}
+
+function updateCrewTabs(){
+  const tabs = document.getElementById('notifyCrewTabs');
+  const checked = [...document.querySelectorAll('#notifyCrewList input[type=checkbox]:checked')];
+  if(!checked.length){ tabs.innerHTML=''; return; }
+  tabs.innerHTML = checked.map(el=>{
+    const crew = CREW_DEFS.find(c=>c.id===el.dataset.crew);
+    const active = notifyCurrentCrew===el.dataset.crew;
+    return `<button onclick="switchNotifyCrew('${el.dataset.crew}')" style="padding:5px 12px;border-radius:20px;border:2px solid ${active?'#7c3aed':'var(--border)'};background:${active?'#7c3aed':'var(--surface)'};color:${active?'#fff':'var(--text)'};font-size:12px;font-weight:700;cursor:pointer">${crew?crew.name:el.dataset.crew}</button>`;
+  }).join('');
+}
+
+function switchNotifyCrew(crewId){
+  notifyCurrentCrew = crewId;
+  updateCrewTabs();
+  notifyPreview();
+}
+
+function buildNotifyMsg(crewId){
+  const crew = CREW_DEFS.find(c=>c.id===crewId);
+  if(!crew) return '';
+  const rec = notifyRecId ? gr(notifyRecId) : null;
+  if(!rec) return '';
+
+  // 日期行
+  const dateStr = rec.date ? rec.date.replace(/^\d+\//, '') : '—';
+  const wday = rec.weekday ? `(${rec.weekday})` : '';
+
+  // 時間：依工班類型取對應時間
+  let timeStr = '';
+  const timeMap = {
+    pre:  { use: document.getElementById('notifyUsePre').checked,  val: document.getElementById('notifyTimePre').value,  label:'前置作業' },
+    mill: { use: document.getElementById('notifyUseMill').checked, val: document.getElementById('notifyTimeMill').value, label:'刨除' },
+    pave: { use: document.getElementById('notifyUsePave').checked, val: document.getElementById('notifyTimePave').value, label:'鋪設' },
+  };
+  const t = timeMap[crew.time];
+  if(t && t.use && t.val){
+    timeStr = `${timePeriod(t.val)}${t.val}${t.label}`;
+  }
+
+  // 機具名稱
+  const nameInput = document.querySelector(`input[data-crewname="${crewId}"]`);
+  const crewName = nameInput ? (nameInput.value.trim() || crew.name) : crew.name;
+
+  // 鏟掃（只有 sweep:true 的工班）
+  let sweepStr = '';
+  if(crew.sweep){
+    const sh = document.getElementById('notifyShovel').value;
+    const sw = document.getElementById('notifySweep').value;
+    if(sh||sw) sweepStr = `${sh||'?'}鏟${sw||'?'}掃`;
+  }
+
+  // 路段
+  const segInputs = [...document.querySelectorAll('input[data-seglink]')];
+  const rec2 = gr(notifyRecId);
+  const segs = (rec2&&rec2.rows||[]).filter(r=>r.segment);
+  const segLines = segs.map((row,i)=>{
+    const linkInput = segInputs.find(el=>+el.dataset.seglink===i);
+    const link = linkInput ? linkInput.value.trim() : '';
+    return `${i+1}. ${row.segment}${link?' '+link:''}`;
+  }).join('\n');
+
+  // 鏟裝機+清掃機：時間 → 鏟掃 → 路段（不顯示機具名稱）
+  // 其他工班：時間 → 機具名稱 → 路段
+  if(crew.sweep){
+    return `${dateStr}${wday} ${timeStr}${sweepStr?'\n'+sweepStr.trim():''}${segLines?'\n'+segLines:''}`;
+  }
+  return `${dateStr}${wday} ${timeStr}\n${crewName}${segLines?'\n'+segLines:''}`;
+}
+
+function notifyPreview(){
+  updateCrewTabs();
+  if(!notifyCurrentCrew){
+    document.getElementById('notifyPreviewBox').textContent='選擇工班後顯示預覽';
+    return;
+  }
+  document.getElementById('notifyPreviewBox').textContent = buildNotifyMsg(notifyCurrentCrew);
+}
+
+function notifyCopy(){
+  if(!notifyCurrentCrew){ showToast('請先選擇工班','error'); return; }
+  const msg = buildNotifyMsg(notifyCurrentCrew);
+  navigator.clipboard.writeText(msg).then(()=>{
+    showToast('已複製！','success');
+  }).catch(()=>{
+    // fallback
+    const ta=document.createElement('textarea');
+    ta.value=msg; document.body.appendChild(ta);
+    ta.select(); document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast('已複製！','success');
+  });
+}
+
+
 function onReportCaseChange(caseId){
   const list = document.getElementById('reportRecList');
   if(!caseId){ list.innerHTML='<div style="color:var(--text-dim);font-size:12px;text-align:center;padding:12px">請先選擇派案</div>'; return; }
@@ -2688,9 +2967,9 @@ let toastT;
 function showToast(msg,type=''){const t=document.getElementById('toast');t.textContent=msg;t.className=`toast show ${type}`;clearTimeout(toastT);toastT=setTimeout(()=>t.className='toast',2500);}
 
 // Modal click-outside
-['matMo','delMo','statsMo','locMo','newCaseMo','reportMo'].forEach(id=>{
+['matMo','delMo','statsMo','locMo','newCaseMo','reportMo','notifyMo'].forEach(id=>{
   document.getElementById(id).addEventListener('click',function(e){
-    if(e.target===this){if(this.id==='matMo')closeMatMo();else if(this.id==='delMo')closeDelMo();else if(this.id==='locMo')closeLocMo();else if(this.id==='newCaseMo')closeNewCaseMo();else if(this.id==='reportMo')closeReportMo();else closeStatsMo();}
+    if(e.target===this){if(this.id==='matMo')closeMatMo();else if(this.id==='delMo')closeDelMo();else if(this.id==='locMo')closeLocMo();else if(this.id==='newCaseMo')closeNewCaseMo();else if(this.id==='reportMo')closeReportMo();else if(this.id==='notifyMo')closeNotifyMo();else closeStatsMo();}
   });
 });
 document.getElementById('previewMo').addEventListener('click',e=>{if(e.target===e.currentTarget)closePreview();});
