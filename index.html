@@ -2594,7 +2594,12 @@ function promptMapLink(recId, rowId){
   if(val===null) return;
   row.mapLink = val.trim();
   persistRecord(rec);
-  renderRecBody(recId);
+  // 直接更新那一列的圖示
+  const trEl = document.getElementById(`tr-${recId}-${rowId}`);
+  if(trEl){
+    const spanEl = trEl.querySelector('span[onclick^="promptMapLink"]');
+    if(spanEl){ spanEl.textContent = row.mapLink ? '📍' : '🔗'; spanEl.style.opacity = row.mapLink ? '1' : '0.3'; spanEl.title = row.mapLink ? '編輯地圖連結' : '貼入 Google Maps 連結'; }
+  }
 }
 
 // ══════════════════════════════════════════
@@ -2783,8 +2788,6 @@ function saveSegLink(recId, rowId, val){
   const row=rec.rows.find(r=>r.id===rowId); if(!row) return;
   row.mapLink = val.trim();
   persistRecord(rec);
-  // 更新路段名稱的超連結圖示
-  renderRecBody(recId);
 }
 
 
