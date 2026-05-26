@@ -2742,28 +2742,31 @@ function buildNotifyCrewList(){
 }
 
 function renderCrewSpecialInput(crew){
+  const rid = notifyRecId || 'global';
+  const cid = crew.id;
+  // helper：取記憶值
+  const sv  = (field) => localStorage.getItem(`notifyVal_${rid}_${cid}_${field}`) || '';
+  // helper：存記憶值
+  const save = (field) => `localStorage.setItem('notifyVal_${rid}_${cid}_${field}',this.value);notifyPreview()`;
+
   if(crew.special==='note_only'){
-    const saved = localStorage.getItem('notifyNote_'+crew.id)||'';
-    return `<input class="fi" data-note="${crew.id}" style="width:120px;font-size:11px" placeholder="備註" value="${saved}" oninput="localStorage.setItem('notifyNote_'+this.dataset.note,this.value);notifyPreview()">`;
+    return `<input class="fi" data-note="${cid}" style="width:120px;font-size:11px" placeholder="備註" value="${sv('note')}" oninput="localStorage.setItem('notifyNote_${cid}',this.value);localStorage.setItem('notifyVal_${rid}_${cid}_note',this.value);notifyPreview()">`;
   }
-  if(crew.special==='note_only'){
-    const note = document.querySelector(`input[data-note="${crewId}"]`);
-    const ntxt = note ? note.value.trim() : '';
-    specialLine = ntxt ? `${crew.name}(${ntxt})` : crew.name;
-  } else if(crew.special==='headcount'){
-    return `<input class="fi" data-headcount="${crew.id}" type="number" min="1" max="99" style="width:52px;text-align:center;font-size:14px;font-weight:700" placeholder="人數" oninput="notifyPreview()">`;
+  if(crew.special==='headcount'){
+    return `<input class="fi" data-headcount="${cid}" type="number" min="1" max="99" style="width:52px;text-align:center;font-size:14px;font-weight:700" placeholder="人數" value="${sv('hc')}" oninput="localStorage.setItem('notifyVal_${rid}_${cid}_hc',this.value);notifyPreview()">`;
   }
   if(crew.special==='headcount_note'){
+    const noteSaved = localStorage.getItem('notifyNote_'+cid)||'';
     return `<div style="display:flex;flex-direction:column;gap:3px">
-      <input class="fi" data-headcount="${crew.id}" type="number" min="1" max="99" style="width:52px;text-align:center;font-size:13px;font-weight:700" placeholder="人數" oninput="notifyPreview()">
-      <input class="fi" data-note="${crew.id}" style="width:120px;font-size:11px" placeholder="備註（工具）" value="${localStorage.getItem('notifyNote_'+crew.id)||''}" oninput="localStorage.setItem('notifyNote_'+this.dataset.note,this.value);notifyPreview()">
+      <input class="fi" data-headcount="${cid}" type="number" min="1" max="99" style="width:52px;text-align:center;font-size:13px;font-weight:700" placeholder="人數" value="${sv('hc')}" oninput="localStorage.setItem('notifyVal_${rid}_${cid}_hc',this.value);notifyPreview()">
+      <input class="fi" data-note="${cid}" style="width:120px;font-size:11px" placeholder="備註（工具）" value="${noteSaved}" oninput="localStorage.setItem('notifyNote_${cid}',this.value);notifyPreview()">
     </div>`;
   }
   if(crew.special==='sweep'){
     return `<div style="display:flex;align-items:center;gap:4px">
-      <input class="fi" data-shovel="${crew.id}" type="number" min="0" max="9" style="width:44px;text-align:center;font-size:14px;font-weight:700" placeholder="鏟" oninput="notifyPreview()">
+      <input class="fi" data-shovel="${cid}" type="number" min="0" max="9" style="width:44px;text-align:center;font-size:14px;font-weight:700" placeholder="鏟" value="${sv('sh')}" oninput="localStorage.setItem('notifyVal_${rid}_${cid}_sh',this.value);notifyPreview()">
       <span style="font-size:12px;font-weight:600">鏟</span>
-      <input class="fi" data-sweep="${crew.id}" type="number" min="0" max="9" style="width:44px;text-align:center;font-size:14px;font-weight:700" placeholder="掃" oninput="notifyPreview()">
+      <input class="fi" data-sweep="${cid}" type="number" min="0" max="9" style="width:44px;text-align:center;font-size:14px;font-weight:700" placeholder="掃" value="${sv('sw')}" oninput="localStorage.setItem('notifyVal_${rid}_${cid}_sw',this.value);notifyPreview()">
       <span style="font-size:12px;font-weight:600">掃</span>
     </div>`;
   }
@@ -2771,23 +2774,24 @@ function renderCrewSpecialInput(crew){
     return `<div style="display:flex;flex-direction:column;gap:3px">
       <div style="display:flex;align-items:center;gap:4px">
         <span style="font-size:11px;color:var(--text-dim);width:24px">40</span>
-        <input class="fi" data-ex40="${crew.id}" type="number" min="0" max="9" style="width:40px;text-align:center;font-size:13px" placeholder="0" oninput="notifyPreview()">
+        <input class="fi" data-ex40="${cid}" type="number" min="0" max="9" style="width:40px;text-align:center;font-size:13px" placeholder="0" value="${sv('ex40')}" oninput="localStorage.setItem('notifyVal_${rid}_${cid}_ex40',this.value);notifyPreview()">
         <span style="font-size:11px;color:var(--text-dim)">台</span>
       </div>
       <div style="display:flex;align-items:center;gap:4px">
         <span style="font-size:11px;color:var(--text-dim);width:24px">70</span>
-        <input class="fi" data-ex70="${crew.id}" type="number" min="0" max="9" style="width:40px;text-align:center;font-size:13px" placeholder="0" oninput="notifyPreview()">
+        <input class="fi" data-ex70="${cid}" type="number" min="0" max="9" style="width:40px;text-align:center;font-size:13px" placeholder="0" value="${sv('ex70')}" oninput="localStorage.setItem('notifyVal_${rid}_${cid}_ex70',this.value);notifyPreview()">
         <span style="font-size:11px;color:var(--text-dim)">台</span>
       </div>
       <div style="display:flex;align-items:center;gap:4px">
         <span style="font-size:11px;color:var(--text-dim);width:24px">120</span>
-        <input class="fi" data-ex120="${crew.id}" type="number" min="0" max="9" style="width:40px;text-align:center;font-size:13px" placeholder="0" oninput="notifyPreview()">
+        <input class="fi" data-ex120="${cid}" type="number" min="0" max="9" style="width:40px;text-align:center;font-size:13px" placeholder="0" value="${sv('ex120')}" oninput="localStorage.setItem('notifyVal_${rid}_${cid}_ex120',this.value);notifyPreview()">
         <span style="font-size:11px;color:var(--text-dim)">台</span>
       </div>
     </div>`;
   }
   return '';
 }
+
 
 const NUM_ZH = ['','一','兩','三','四','五','六','七','八','九'];
 function numZh(n){ const v=+n; return (v>=1&&v<=9)?NUM_ZH[v]:String(v); }
