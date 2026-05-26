@@ -2613,7 +2613,7 @@ const DEFAULT_CREWS = [
   {id:'pcc', name:'刨除機',        time:'mill', special:''},
   {id:'gs',  name:'鏟裝機+清掃機', time:'mill', special:'sweep'},
   {id:'gsh', name:'怪手',          time:'mill', special:'excavator'},
-  {id:'pzj', name:'鋪裝機',        time:'pave', special:''},
+  {id:'pzj', name:'鋪裝機',        time:'pave', special:'note_only'},
   {id:'psw', name:'鋪設工',        time:'pave', special:'headcount'},
   {id:'rs',  name:'熱鏟',          time:'pave', special:''},
   {id:'el2', name:'二輪壓路機',    time:'pave', special:''},
@@ -2649,7 +2649,7 @@ function openCrewMgMo(){
 function closeCrewMgMo(){ document.getElementById('crewMgMo').classList.remove('open'); }
 
 const TIME_LABELS = {pre:'前置', mill:'刨除', pave:'鋪設'};
-const SPECIAL_LABELS = {'':'無','headcount':'人數','headcount_note':'人數+備註','sweep':'鏟掃','excavator':'怪手型號'};
+const SPECIAL_LABELS = {'':'無','note_only':'備註','headcount':'人數','headcount_note':'人數+備註','sweep':'鏟掃','excavator':'怪手型號'};
 
 function renderCrewMgList(){
   const list = document.getElementById('crewMgList');
@@ -2722,14 +2722,21 @@ function openNotifyMo(){
   document.getElementById('notifyPreviewBox').textContent='選擇工班後顯示預覽';
   notifyCurrentCrew=null; notifyRecId=null;
   buildNotifyCrewList();
+  // 恢復上次勾選的工班，設第一個勾選的為當前預覽
+  const firstChecked = crewDefs.find(c=>localStorage.getItem('notifyCrew_'+c.id)==='1');
+  if(firstChecked) notifyCurrentCrew = firstChecked.id;
+  updateCrewTabs();
   document.getElementById('notifyMo').classList.add('open');
 }
+
+function getCrewChecked(id){ return localStorage.getItem('notifyCrew_'+id)==='1' ? 'checked' : ''; }
+function setCrewChecked(id, val){ localStorage.setItem('notifyCrew_'+id, val?'1':'0'); }
 
 function buildNotifyCrewList(){
   const list = document.getElementById('notifyCrewList');
   list.innerHTML = crewDefs.map(crew=>`
     <label style="display:flex;align-items:center;gap:7px;padding:7px 10px;background:var(--surface);border:1px solid var(--border);border-radius:7px;cursor:pointer;user-select:none">
-      <input type="checkbox" data-crew="${crew.id}" style="width:15px;height:15px;accent-color:#7c3aed;flex-shrink:0" onchange="onCrewCheck('${crew.id}',this.checked)">
+      <input type="checkbox" data-crew="${crew.id}" style="width:15px;height:15px;accent-color:#7c3aed;flex-shrink:0" ${getCrewChecked(crew.id)} onchange="setCrewChecked('${crew.id}',this.checked);onCrewCheck('${crew.id}',this.checked)">
       <div style="flex:1;min-width:0">
         <div style="font-size:12px;font-weight:700;color:var(--text)">${eh(crew.name)}</div>
         <div style="font-size:10px;color:var(--text-dim)">${TIME_LABELS[crew.time]||crew.time}進場</div>
@@ -2740,7 +2747,15 @@ function buildNotifyCrewList(){
 }
 
 function renderCrewSpecialInput(crew){
-  if(crew.special==='headcount'){
+  if(crew.special==='note_only'){
+    const saved = localStorage.getItem('notifyNote_'+crew.id)||'';
+    return `<input class="fi" data-note="${crew.id}" style="width:120px;font-size:11px" placeholder="備註" value="${saved}" oninput="localStorage.setItem('notifyNote_'+this.dataset.note,this.value);notifyPreview()">`;
+  }
+  if(crew.special==='note_only'){
+    const note = document.querySelector(`input[data-note="${crewId}"]`);
+    const ntxt = note ? note.value.trim() : '';
+    specialLine = ntxt ? `${crew.name}(${ntxt})` : crew.name;
+  } else if(crew.special==='headcount'){
     return `<input class="fi" data-headcount="${crew.id}" type="number" min="1" max="99" style="width:52px;text-align:center;font-size:14px;font-weight:700" placeholder="人數" oninput="notifyPreview()">`;
   }
   if(crew.special==='headcount_note'){
@@ -2808,7 +2823,7 @@ function onNotifyRecChange(recId){
   document.getElementById('notifyTimeRow').style.display='flex';
   document.getElementById('notifySweepRow').style.display='flex';
 
-  const pre = rec.setup || rec.milling || '';
+  const pre = rec.prepare || '';
   const mill = rec.milling || '';
   const pave = rec.paving || '';
 
@@ -2876,13 +2891,14 @@ function buildNotifyMsg(crewId){
   const wday = rec.weekday ? `(${rec.weekday})` : '';
 
   // 時間（不含「前置/刨除/鋪設」文字，只有「早上08:00」）
+  const TIME_SUFFIX = {pre:'前置作業', mill:'刨除', pave:'鋪設'};
   const timeMap = {
     pre:  { use: document.getElementById('notifyUsePre').checked,  val: document.getElementById('notifyTimePre').value  },
     mill: { use: document.getElementById('notifyUseMill').checked, val: document.getElementById('notifyTimeMill').value },
     pave: { use: document.getElementById('notifyUsePave').checked, val: document.getElementById('notifyTimePave').value },
   };
   const t = timeMap[crew.time];
-  const timeStr = (t && t.use && t.val) ? `${timePeriod(t.val)}${t.val}` : '';
+  const timeStr = (t && t.use && t.val) ? `${timePeriod(t.val)}${t.val}${TIME_SUFFIX[crew.time]||''}` : '';
 
   // 路段
   const segInputs = [...document.querySelectorAll('input[data-seglink]')];
@@ -2895,7 +2911,11 @@ function buildNotifyMsg(crewId){
 
   // 特殊欄位
   let specialLine = '';
-  if(crew.special==='headcount'){
+  if(crew.special==='note_only'){
+    const note = document.querySelector(`input[data-note="${crewId}"]`);
+    const ntxt = note ? note.value.trim() : '';
+    specialLine = ntxt ? `${crew.name}(${ntxt})` : crew.name;
+  } else if(crew.special==='headcount'){
     const n = document.querySelector(`input[data-headcount="${crewId}"]`);
     const cnt = n ? n.value.trim() : '';
     specialLine = cnt ? `${cnt}個人` : '';
