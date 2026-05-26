@@ -535,13 +535,6 @@ table.dt tbody tr:last-child td{border-bottom:none;}
         </div>
       </div>
 
-      <div id="notifySweepRow" style="display:none;align-items:center;gap:8px">
-        <div style="font-size:13px;font-weight:600;color:var(--text)">鏟掃（鏟裝機班長用）：</div>
-        <input class="fi" id="notifyShovel" type="number" min="0" max="9" style="width:52px;text-align:center;font-size:15px;font-weight:700" placeholder="3" oninput="notifyPreview()">
-        <span style="font-size:14px;font-weight:600">鏟</span>
-        <input class="fi" id="notifySweep" type="number" min="0" max="9" style="width:52px;text-align:center;font-size:15px;font-weight:700" placeholder="2" oninput="notifyPreview()">
-        <span style="font-size:14px;font-weight:600">掃</span>
-      </div>
     </div>
 
     <div style="margin-top:12px">
@@ -2573,8 +2566,7 @@ function openNotifyMo(){
 
   // 重置
   document.getElementById('notifyTimeRow').style.display='none';
-  document.getElementById('notifySweepRow').style.display='none';
-  document.getElementById('notifySegList').innerHTML='<div style="color:var(--text-dim);font-size:12px;text-align:center;padding:8px">請先選擇施工記錄</div>';
+    document.getElementById('notifySegList').innerHTML='<div style="color:var(--text-dim);font-size:12px;text-align:center;padding:8px">請先選擇施工記錄</div>';
   document.getElementById('notifyCrewTabs').innerHTML='';
   document.getElementById('notifyPreviewBox').textContent='選擇工班後顯示預覽';
   notifyCurrentCrew=null; notifyRecId=null;
@@ -2716,21 +2708,24 @@ function openNotifyMo(){
     }).join('');
   sel.value='';
   document.getElementById('notifyTimeRow').style.display='none';
-  document.getElementById('notifySweepRow').style.display='none';
-  document.getElementById('notifySegList').innerHTML='<div style="color:var(--text-dim);font-size:12px;text-align:center;padding:8px">請先選擇施工記錄</div>';
+    document.getElementById('notifySegList').innerHTML='<div style="color:var(--text-dim);font-size:12px;text-align:center;padding:8px">請先選擇施工記錄</div>';
   document.getElementById('notifyCrewTabs').innerHTML='';
   document.getElementById('notifyPreviewBox').textContent='選擇工班後顯示預覽';
   notifyCurrentCrew=null; notifyRecId=null;
   buildNotifyCrewList();
-  // 恢復上次勾選的工班，設第一個勾選的為當前預覽
-  const firstChecked = crewDefs.find(c=>localStorage.getItem('notifyCrew_'+c.id)==='1');
-  if(firstChecked) notifyCurrentCrew = firstChecked.id;
+  notifyCurrentCrew = null;
   updateCrewTabs();
   document.getElementById('notifyMo').classList.add('open');
 }
 
-function getCrewChecked(id){ return localStorage.getItem('notifyCrew_'+id)==='1' ? 'checked' : ''; }
-function setCrewChecked(id, val){ localStorage.setItem('notifyCrew_'+id, val?'1':'0'); }
+function getCrewChecked(id){ 
+  const key = notifyRecId ? 'notifyCrew_'+notifyRecId+'_'+id : 'notifyCrew_'+id;
+  return localStorage.getItem(key)==='1' ? 'checked' : ''; 
+}
+function setCrewChecked(id, val){ 
+  const key = notifyRecId ? 'notifyCrew_'+notifyRecId+'_'+id : 'notifyCrew_'+id;
+  localStorage.setItem(key, val?'1':'0'); 
+}
 
 function buildNotifyCrewList(){
   const list = document.getElementById('notifyCrewList');
@@ -2821,9 +2816,7 @@ function onNotifyRecChange(recId){
 
   // 帶入時間
   document.getElementById('notifyTimeRow').style.display='flex';
-  document.getElementById('notifySweepRow').style.display='flex';
-
-  const pre = rec.prepare || '';
+    const pre = rec.prepare || '';
   const mill = rec.milling || '';
   const pave = rec.paving || '';
 
@@ -2852,6 +2845,11 @@ function onNotifyRecChange(recId){
     `).join('');
   }
 
+  // 切換記錄後重新載入該記錄的勾選狀態
+  buildNotifyCrewList();
+  const firstChecked = crewDefs.find(c=>getCrewChecked(c.id)==='checked');
+  notifyCurrentCrew = firstChecked ? firstChecked.id : null;
+  updateCrewTabs();
   notifyPreview();
 }
 
