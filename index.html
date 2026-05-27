@@ -2561,12 +2561,10 @@ function openNotifyMo(){
     }).join('');
   sel.value = '';
 
-  // 建立工班清單
-  buildCrewList();
-
-  // 重置
+  // 重置（工班清單等選了記錄才建立，確保 recId 有值）
   document.getElementById('notifyTimeRow').style.display='none';
-    document.getElementById('notifySegList').innerHTML='<div style="color:var(--text-dim);font-size:12px;text-align:center;padding:8px">請先選擇施工記錄</div>';
+  document.getElementById('notifySegList').innerHTML='<div style="color:var(--text-dim);font-size:12px;text-align:center;padding:8px">請先選擇施工記錄</div>';
+  document.getElementById('notifyCrewList').innerHTML='<div style="color:var(--text-dim);font-size:12px;text-align:center;padding:8px">請先選擇施工記錄</div>';
   document.getElementById('notifyCrewTabs').innerHTML='';
   document.getElementById('notifyPreviewBox').textContent='選擇工班後顯示預覽';
   notifyCurrentCrew=null; notifyRecId=null;
@@ -2641,7 +2639,7 @@ function openCrewMgMo(){
 function closeCrewMgMo(){ document.getElementById('crewMgMo').classList.remove('open'); }
 
 const TIME_LABELS = {pre:'前置', mill:'刨除', pave:'鋪設'};
-const SPECIAL_LABELS = {'':'無','note_only':'備註','headcount':'人數','headcount_note':'人數+備註','sweep':'鏟掃','excavator':'怪手型號'};
+const SPECIAL_LABELS = {'':'無','note_only':'備註','headcount':'人數','headcount_note':'人數+備註','sweep':'鏟掃','excavator':'怪手型號','count':'台數'};
 
 function renderCrewMgList(){
   const list = document.getElementById('crewMgList');
@@ -2718,6 +2716,20 @@ function openNotifyMo(){
   document.getElementById('notifyMo').classList.add('open');
 }
 
+function rebuildSegNums(){
+  if(!notifyRecId) return;
+  const rec = gr(notifyRecId); if(!rec) return;
+  const segs = (rec.rows||[]).filter(r=>r.segment);
+  let n=0;
+  segs.forEach(row=>{
+    const key='notifySeg_'+notifyRecId+'_'+row.id;
+    const el=document.getElementById('segnum_'+row.id);
+    if(!el) return;
+    if(localStorage.getItem(key)==='0'){ el.textContent=''; }
+    else{ n++; el.textContent=n; }
+  });
+}
+
 function getCrewChecked(id){ 
   const key = notifyRecId ? 'notifyCrew_'+notifyRecId+'_'+id : 'notifyCrew_'+id;
   return localStorage.getItem(key)==='1' ? 'checked' : ''; 
@@ -2789,6 +2801,10 @@ function renderCrewSpecialInput(crew){
       </div>
     </div>`;
   }
+  if(crew.special==='count'){
+    return `<input class="fi" data-count="${cid}" type="number" min="1" max="9" style="width:44px;text-align:center;font-size:14px;font-weight:700" placeholder="台" value="${sv('cnt')}" oninput="localStorage.setItem('notifyVal_${rid}_${cid}_cnt',this.value);notifyPreview()">
+    <span style="font-size:12px;font-weight:600">台</span>`;
+  }
   return '';
 }
 
@@ -2831,22 +2847,29 @@ function onNotifyRecChange(recId){
   document.getElementById('notifyUseMill').checked = !!mill;
   document.getElementById('notifyUsePave').checked = !!pave;
 
-  // 建立路段清單
+  // 建立路段清單（含勾選）
   const segs = (rec.rows||[]).filter(r=>r.segment);
   const segList = document.getElementById('notifySegList');
   if(!segs.length){
     segList.innerHTML='<div style="color:var(--text-dim);font-size:12px;text-align:center;padding:8px">此記錄沒有路段資料</div>';
   } else {
-    segList.innerHTML = segs.map((row,i)=>`
-      <div style="display:flex;align-items:center;gap:8px">
-        <div style="font-size:13px;font-weight:700;color:var(--text-dim);width:20px;text-align:center;flex-shrink:0">${i+1}</div>
+    segList.innerHTML = segs.map((row,i)=>{
+      const segKey = 'notifySeg_'+notifyRecId+'_'+row.id;
+      const isChecked = localStorage.getItem(segKey)!=='0';
+      const num = isChecked ? segs.slice(0,i+1).filter((_,j)=>{
+        const k='notifySeg_'+notifyRecId+'_'+segs[j].id;
+        return localStorage.getItem(k)!=='0';
+      }).length : '';
+      return `<label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:3px 0">
+        <input type="checkbox" data-segrow="${row.id}" ${isChecked?'checked':''} style="width:15px;height:15px;accent-color:var(--accent);flex-shrink:0" onchange="localStorage.setItem('notifySeg_${notifyRecId}_${row.id}',this.checked?'1':'0');rebuildSegNums();notifyPreview()">
+        <div style="font-size:13px;font-weight:700;color:var(--text-dim);width:18px;text-align:center;flex-shrink:0" id="segnum_${row.id}">${num}</div>
         ${row.mapLink
           ? `<a href="${eh(row.mapLink)}" target="_blank" style="flex:1;font-size:13px;font-weight:600;color:var(--accent);text-decoration:none">${eh(row.segment)} 📍</a>`
           : `<div style="flex:1;font-size:13px;font-weight:600;color:var(--text)">${eh(row.segment)}</div>`
         }
         <input class="fi" data-seglink="${i}" value="${eh(row.mapLink||'')}" style="flex:1.2;font-size:12px;padding:4px 8px" placeholder="貼入 Google Maps 連結" oninput="saveSegLink(${rec.id},${row.id},this.value);notifyPreview()">
-      </div>
-    `).join('');
+      </label>`;
+    }).join('');
   }
 
   // 切換記錄後重新載入該記錄的勾選狀態
@@ -2902,14 +2925,18 @@ function buildNotifyMsg(crewId){
   const t = timeMap[crew.time];
   const timeStr = (t && t.use && t.val) ? `${timePeriod(t.val)}${t.val}${TIME_SUFFIX[crew.time]||''}` : '';
 
-  // 路段
+  // 路段（只輸出勾選的，重新編號）
   const segInputs = [...document.querySelectorAll('input[data-seglink]')];
   const segs = (rec.rows||[]).filter(r=>r.segment);
+  let segNum = 0;
   const segLines = segs.map((row,i)=>{
+    const segKey = 'notifySeg_'+notifyRecId+'_'+row.id;
+    if(localStorage.getItem(segKey)==='0') return '';
+    segNum++;
     const linkInput = segInputs.find(el=>+el.dataset.seglink===i);
     const link = linkInput ? linkInput.value.trim() : (row.mapLink||'');
-    return `${i+1}. ${row.segment}${link?'\n'+link:''}`;
-  }).join('\n');
+    return `${segNum}. ${row.segment}${link?'\n'+link:''}`;
+  }).filter(Boolean).join('\n');
 
   // 特殊欄位
   let specialLine = '';
@@ -2942,6 +2969,10 @@ function buildNotifyMsg(crewId){
     if(e70  && +e70.value  > 0) parts.push(`70怪手${numZh(e70.value)}台`);
     if(e120 && +e120.value > 0) parts.push(`120怪手${numZh(e120.value)}台`);
     specialLine = parts.join('.');
+  } else if(crew.special==='count'){
+    const ct = document.querySelector(`input[data-count="${crewId}"]`);
+    const n = ct ? +ct.value : 0;
+    specialLine = n>0 ? `${crew.name}${numZh(n)}台` : crew.name;
   } else {
     specialLine = crew.name;
   }
