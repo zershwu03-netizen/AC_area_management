@@ -25,13 +25,13 @@
 <title>施工面積管理</title>
 <style>
 :root{
-  --bg:#f0f4f8;--surface:#ffffff;--surface2:#f5f7fa;--border:#dde3ec;
-  --accent:#2563eb;--accent2:#d97706;--text:#1e293b;--text-dim:#64748b;
+  --bg:#d8e0ea;--surface:#ffffff;--surface2:#f0f4f8;--border:#b8c4d4;
+  --accent:#2563eb;--accent2:#d97706;--text:#1e293b;--text-dim:#475569;
   --danger:#dc2626;--success:#16a34a;--header-bg:#ffffff;
-  --row-odd:#ffffff;--row-even:#f8fafc;--input-bg:#f8fafc;
+  --row-odd:#ffffff;--row-even:#f5f7fa;--input-bg:#f8fafc;
   --font:'Microsoft YaHei','PingFang TC','Noto Sans TC',sans-serif;
-  --shadow:0 1px 4px rgba(0,0,0,.08),0 0 0 1px rgba(0,0,0,.04);
-  --shadow-md:0 4px 16px rgba(0,0,0,.1),0 1px 4px rgba(0,0,0,.06);
+  --shadow:0 2px 8px rgba(0,0,0,.13),0 0 0 1px rgba(0,0,0,.07);
+  --shadow-md:0 6px 20px rgba(0,0,0,.14),0 2px 6px rgba(0,0,0,.08);
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;touch-action:manipulation;}
 body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
@@ -59,14 +59,14 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 
 .stats-bar{display:flex;gap:7px;margin-bottom:11px;}
 .stat-chip{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 8px;text-align:center;box-shadow:var(--shadow);}
-.stat-chip .val{font-size:22px;font-weight:700;color:var(--accent);}
-.stat-chip .lbl{font-size:14px;color:var(--text-dim);margin-top:1px;}
+.stat-chip .val{font-size:24px;font-weight:700;color:var(--accent);}
+.stat-chip .lbl{font-size:13px;color:var(--text-dim);margin-top:1px;}
 
-.record-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:var(--shadow);transition:border-color .2s,box-shadow .2s;}
+.record-card{background:var(--surface);border:1.5px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:var(--shadow);transition:border-color .2s,box-shadow .2s;}
 .record-card.active{border-color:var(--accent);box-shadow:0 0 0 3px rgba(37,99,235,.12),var(--shadow);}
 .record-card-header{display:flex;align-items:center;justify-content:space-between;padding:11px 13px;cursor:pointer;gap:7px;background:var(--surface);}
 .record-meta{display:flex;flex-wrap:wrap;gap:4px;align-items:center;flex:1;min-width:0;}
-.tag{font-size:12px;font-weight:600;padding:3px 8px;border-radius:20px;background:var(--surface2);color:var(--text-dim);border:1px solid var(--border);white-space:nowrap;}
+.tag{font-size:13px;font-weight:600;padding:3px 9px;border-radius:20px;background:var(--surface2);color:var(--text-dim);border:1px solid var(--border);white-space:nowrap;}
 .tag.accent{background:#eff6ff;color:#2563eb;border-color:#bfdbfe;}
 .tag.warn{background:#fffbeb;color:#d97706;border-color:#fde68a;}
 .record-title{font-size:12px;font-weight:700;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -77,13 +77,13 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .shift-btn.active-day{background:#fffbeb;border-color:#f59e0b;color:#d97706;}
 .shift-btn.active-night{background:#eff6ff;border-color:#3b82f6;color:#2563eb;}
 /* location badge in header — distinct from case badge */
-.card-loc-badge{font-size:12px;font-weight:800;color:#fff;background:var(--accent);border-radius:5px;padding:2px 7px;white-space:nowrap;flex-shrink:0;letter-spacing:.5px;}
+.card-loc-badge{font-size:13px;font-weight:800;color:#fff;background:var(--accent);border-radius:5px;padding:2px 7px;white-space:nowrap;flex-shrink:0;letter-spacing:.5px;}
 .card-summary{display:flex;flex-direction:column;gap:6px;padding:8px 13px 10px;border-top:1px solid var(--border);background:var(--surface2);}
 .card-sum-item{display:flex;align-items:baseline;gap:3px;}
 .card-sum-label{font-size:12px;color:var(--text-dim);}
 .card-sum-val{font-size:15px;font-weight:700;color:var(--accent);}
 .card-sum-unit{font-size:12px;color:var(--text-dim);}
-.card-case-badge{font-size:12px;font-weight:700;color:var(--accent);background:#eff6ff;border:1px solid #bfdbfe;border-radius:5px;padding:2px 6px;white-space:nowrap;flex-shrink:0;}
+.card-case-badge{font-size:13px;font-weight:700;color:var(--accent);background:#eff6ff;border:1px solid #bfdbfe;border-radius:5px;padding:2px 6px;white-space:nowrap;flex-shrink:0;}
 .icon-btn{width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:7px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;color:var(--text-dim);transition:all .15s;}
 .icon-btn:active{background:var(--border);}
 .icon-btn.del:active{background:var(--danger);color:#fff;}
@@ -94,7 +94,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;}
 .info-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;}
 .fg{display:flex;flex-direction:column;gap:3px;}
-.fl{font-size:13px;font-weight:700;letter-spacing:.4px;color:var(--text-dim);text-transform:uppercase;}
+.fl{font-size:14px;font-weight:700;letter-spacing:.3px;color:var(--text-dim);text-transform:uppercase;}
 .fi,.fs{background:var(--input-bg);border:1.5px solid var(--border);border-radius:7px;padding:8px 8px;font-family:var(--font);font-size:17px;color:var(--text);width:100%;-webkit-appearance:none;appearance:none;transition:border-color .15s;}
 .fi:focus,.fs:focus{outline:none;border-color:var(--accent);background:#fff;}
 .fi[readonly]{background:var(--surface2);cursor:default;color:var(--accent);font-weight:600;}
@@ -122,7 +122,7 @@ table.dt tbody tr:last-child td{border-bottom:none;}
 .ci{background:transparent;border:1.5px solid transparent;border-radius:5px;padding:5px 3px;font-family:var(--font);font-size:15px;color:var(--text);width:100%;text-align:center;transition:border-color .15s,background .15s;min-width:44px;user-select:text;}
 .ci:focus{outline:none;border-color:var(--accent);background:#fff;}
 .ci.seg{min-width:100px;text-align:left;}
-.cr{font-size:15px;color:var(--accent2);font-weight:700;padding:4px 2px;}
+.cr{font-size:16px;color:var(--accent2);font-weight:700;padding:4px 2px;}
 .cr.dim{color:var(--text-dim);font-weight:400;}
 
 .total-row td{background:#eff6ff !important;font-weight:700;color:var(--accent);}
