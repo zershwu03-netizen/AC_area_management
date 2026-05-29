@@ -2936,7 +2936,7 @@ function buildNotifyMsg(crewId){
     const linkInput = segInputs.find(el=>+el.dataset.seglink===i);
     const link = linkInput ? linkInput.value.trim() : (row.mapLink||'');
     return `${segNum}. ${row.segment}${link?'\n'+link:''}`;
-  }).filter(Boolean).join('\n');
+  }).filter(Boolean).join('\n\n');
 
   // 特殊欄位
   let specialLine = '';
@@ -2977,11 +2977,11 @@ function buildNotifyMsg(crewId){
     specialLine = crew.name;
   }
 
-  // 組合訊息
+  // 組合訊息（每行後面空一行）
   const lines = [`${dateStr}${wday} ${timeStr}`];
   if(specialLine) lines.push(specialLine);
   if(segLines) lines.push(segLines);
-  return lines.join('\n');
+  return lines.join('\n\n');
 }
 
 function notifyPreview(){
