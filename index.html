@@ -96,7 +96,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .fg{display:flex;flex-direction:column;gap:3px;}
 .fl{font-size:14px;font-weight:700;letter-spacing:.3px;color:var(--text-dim);text-transform:uppercase;}
 .fi,.fs{background:var(--input-bg);border:1.5px solid var(--border);border-radius:7px;padding:8px 8px;font-family:var(--font);font-size:17px;color:var(--text);width:100%;-webkit-appearance:none;appearance:none;transition:border-color .15s;}
-.fi:focus,.fs:focus{outline:none;border-color:var(--accent);background:#fff;}
+.fi:focus,.fs:focus{outline:none;border-color:var(--accent);background:#fff;box-shadow:0 0 0 3px rgba(37,99,235,.18);}
 .fi[readonly]{background:var(--surface2);cursor:default;color:var(--accent);font-weight:600;}
 .sw{position:relative;}.sw::after{content:'▾';position:absolute;right:8px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--text-dim);font-size:11px;}
 .sw .fs{padding-right:24px;}
@@ -120,7 +120,7 @@ table.dt tbody tr:nth-child(odd) td{background:var(--row-odd);}
 table.dt tbody tr:nth-child(even) td{background:var(--row-even);}
 table.dt tbody tr:last-child td{border-bottom:none;}
 .ci{background:transparent;border:1.5px solid transparent;border-radius:5px;padding:5px 3px;font-family:var(--font);font-size:15px;color:var(--text);width:100%;text-align:center;transition:border-color .15s,background .15s;min-width:44px;user-select:text;}
-.ci:focus{outline:none;border-color:var(--accent);background:#fff;}
+.ci:focus{outline:none;border-color:var(--accent);background:#fff;box-shadow:0 0 0 3px rgba(37,99,235,.18);}
 .ci.seg{min-width:100px;text-align:left;}
 .cr{font-size:16px;color:var(--accent2);font-weight:700;padding:4px 2px;}
 .cr.dim{color:var(--text-dim);font-weight:400;}
@@ -1046,11 +1046,11 @@ function renderCard(rec, idx=0){
     <div class="fg"><div class="fl">工區路段</div><input class="fi" value="${ea(rec.zone)}" oninput="uf(${rec.id},'zone',this.value)" placeholder="路段名稱"></div>
     <div class="info-grid-3">
       <div class="fg"><div class="fl">日期</div><input class="fi" value="${ea(rec.date)}" oninput="uDateRaw(${rec.id},this.value)" onblur="uDateBlur(${rec.id},this)" placeholder="115/04/08"></div>
-      <div class="fg"><div class="fl">星期（自動）</div><input class="fi" id="wi-${rec.id}" value="${ea(rec.weekday)}" readonly></div>
+      <div class="fg"><div class="fl">星期（自動）</div><input class="fi" id="wi-${rec.id}" value="${ea(rec.weekday)}" readonly tabindex="-1"></div>
       <div class="fg"><div class="fl">日 / 夜</div>
         <div class="shift-toggle">
-          <button class="shift-btn${rec.shift==='日間'?' active-day':''}" onclick="uShift(${rec.id},'日間',this)">☀️ 日</button>
-          <button class="shift-btn${rec.shift==='夜間'?' active-night':''}" onclick="uShift(${rec.id},'夜間',this)">🌙 夜</button>
+          <button class="shift-btn${rec.shift==='日間'?' active-day':''}" onclick="uShift(${rec.id},'日間',this)" tabindex="-1">☀️ 日</button>
+          <button class="shift-btn${rec.shift==='夜間'?' active-night':''}" onclick="uShift(${rec.id},'夜間',this)" tabindex="-1">🌙 夜</button>
         </div>
       </div>
     </div>
@@ -1098,7 +1098,7 @@ function renderCard(rec, idx=0){
           </tr>
         </tfoot>
       </table></div>
-      <button class="add-row-btn" onclick="addRow(${rec.id})">
+      <button class="add-row-btn" onclick="addRow(${rec.id})" tabindex="-1">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:13px;height:13px"><path d="M12 5v14M5 12h14"/></svg>新增路段
       </button>
     </div>
@@ -1162,11 +1162,11 @@ function renderRow(rec,row,idx){
   return `<tr id="tr-${rec.id}-${row.id}">
     <td>
       <div style="display:flex;flex-direction:column;gap:1px;align-items:center">
-        <button class="del-row-btn" style="font-size:10px;line-height:1" onclick="moveRow(${rec.id},${row.id},-1)" title="上移">▲</button>
-        <button class="del-row-btn" style="font-size:10px;line-height:1" onclick="moveRow(${rec.id},${row.id},1)" title="下移">▼</button>
+        <button class="del-row-btn" style="font-size:10px;line-height:1" onclick="moveRow(${rec.id},${row.id},-1)" title="上移" tabindex="-1">▲</button>
+        <button class="del-row-btn" style="font-size:10px;line-height:1" onclick="moveRow(${rec.id},${row.id},1)" title="下移" tabindex="-1">▼</button>
       </div>
     </td>
-    <td><div class="cr">${idx+1}</div></td>
+    <td><div class="cr" tabindex="-1">${idx+1}</div></td>
     <td><input class="ci" value="${ea(row.village||'')}" oninput="urf(${rec.id},${row.id},'village',this.value)" placeholder="里別" style="min-width:44px;max-width:56px"></td>
     <td style="position:relative">
       <div style="display:flex;align-items:center;gap:3px">
@@ -1176,10 +1176,10 @@ function renderRow(rec,row,idx){
     </td>
     <td><input class="ci" type="number" step="0.1" value="${a||''}" oninput="urA(${rec.id},${row.id},this)" placeholder="0"></td>
     <td><input class="ci" type="number" step="0.5" value="${ea(t)}" oninput="urT(${rec.id},${row.id},this.value)" placeholder="cm"></td>
-    <td><div class="cr" id="tn-${rec.id}-${row.id}">${tons}</div></td>
-    <td><div class="cr dim" id="mn-${rec.id}-${row.id}">${mill}</div></td>
+    <td><div class="cr" id="tn-${rec.id}-${row.id}" tabindex="-1">${tons}</div></td>
+    <td><div class="cr dim" id="mn-${rec.id}-${row.id}" tabindex="-1">${mill}</div></td>
     <td><input class="ci" type="number" min="0" step="1" value="${row.signs||''}" oninput="urf(${rec.id},${row.id},'signs',this.value);updSignCount(${rec.id})" placeholder="0" style="min-width:36px;max-width:48px"></td>
-    <td><button class="del-row-btn" onclick="delRow(${rec.id},${row.id})">×</button></td>
+    <td><button class="del-row-btn" onclick="delRow(${rec.id},${row.id})" tabindex="-1">×</button></td>
   </tr>`;
 }
 
@@ -1529,7 +1529,7 @@ function renderCaseBigCard(c) {
       <!-- Row 2: accept dates -->
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:nowrap">
         <span style="font-size:12px;color:#16a34a;font-weight:600;white-space:nowrap">初驗</span>
-        <input class="fi" style="width:110px;font-size:13px;padding:5px 7px" value="${ea(c.preAcceptDate||'')}" onblur="uCase(${c.id},'preAcceptDate',this.value);validateDate(this)" placeholder="115/04/20">
+        <input class="fi" style="width:110px;font-size:13px;padding:5px 7px" value="${ea(c.preAcceptDate||'')}" onblur="uCase(${c.id},'preAcceptDate',this.value);validateDate(this)" placeholder="115/04/20" tabindex="-1">
         <span style="font-size:12px;color:#16a34a;font-weight:600;white-space:nowrap">正驗</span>
         <input class="fi" style="width:110px;font-size:13px;padding:5px 7px" value="${ea(c.mainAcceptDate||'')}" onblur="uCase(${c.id},'mainAcceptDate',this.value);validateDate(this)" placeholder="115/05/10">
       </div>
