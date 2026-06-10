@@ -1565,10 +1565,17 @@ function renderFiltered() {
 
   // Separate active vs completed cases
   // 依派案最新施工日期排序（舊→新，新派案在下面）
+  // 沒有施工記錄的派案用 id（建立時間）排序
   const sortCases = arr => [...arr].sort((a,b)=>{
-    const latestDate = c => getCaseRecords(c.id).reduce((m,r)=>{ const d=parseDate(r.date); return d&&d>m?d:m; }, new Date(0));
+    const latestDate = c => {
+      const recs = getCaseRecords(c.id);
+      if(!recs.length) return new Date(+c.id||0);
+      return recs.reduce((m,r)=>{ const d=parseDate(r.date); return d&&d>m?d:m; }, new Date(0));
+    };
     const da=latestDate(a), db=latestDate(b);
-    return da.getTime()-db.getTime();
+    const diff = da.getTime()-db.getTime();
+    // 日期相同時，依 id 舊→新
+    return diff !== 0 ? -diff : (+b.id||0)-(+a.id||0);
   });
 
   const activeCases = sortCases(filteredCases.filter(c => {
