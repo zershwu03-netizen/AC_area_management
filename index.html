@@ -1564,14 +1564,21 @@ function renderFiltered() {
   }
 
   // Separate active vs completed cases
-  const activeCases = filteredCases.filter(c => {
+  // 依派案最新施工日期排序（舊→新，新派案在下面）
+  const sortCases = arr => [...arr].sort((a,b)=>{
+    const latestDate = c => getCaseRecords(c.id).reduce((m,r)=>{ const d=parseDate(r.date); return d&&d>m?d:m; }, new Date(0));
+    const da=latestDate(a), db=latestDate(b);
+    return da.getTime()-db.getTime();
+  });
+
+  const activeCases = sortCases(filteredCases.filter(c => {
     const recs = getCaseRecords(c.id);
     return !recs.length || !recs.every(r=>r.locked);
-  });
-  const doneCases = filteredCases.filter(c => {
+  }));
+  const doneCases = sortCases(filteredCases.filter(c => {
     const recs = getCaseRecords(c.id);
     return recs.length > 0 && recs.every(r=>r.locked);
-  });
+  }));
 
   let html = activeCases.map(c=>renderCaseBigCard(c)).join('');
   if (doneCases.length) {
