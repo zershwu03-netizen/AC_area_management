@@ -1537,7 +1537,7 @@ function renderCaseBigCard(c) {
 
     <!-- Records inside this case -->
     <div class="case-records" id="recs-${cid}">
-      ${recs.map((r,i)=>renderCard(r,i)).join('')}
+      ${getSorted(recs).map((r,i)=>renderCard(r,i)).join('')}
       <div style="padding:8px 10px">
         <button class="add-row-btn" style="border-color:var(--accent);color:var(--accent)" onclick="addRecordToCase(${c.id})">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:13px;height:13px"><path d="M12 5v14M5 12h14"/></svg>新增施工記錄
